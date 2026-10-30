@@ -1,0 +1,2243 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>مرصاد للمضاربة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&display=swap">
+<style>/* Layout: terminal-style two-column workspace (chart | decision rail), stacking to one column on phones.
+   Identity: night-observatory ink with a brass instrument accent; semantic up/down/warn kept separate. */
+:root {
+  --bg: #F3F5F9;
+  --surface: #FFFFFF;
+  --surface-2: #EDF1F7;
+  --line: #D9E0EA;
+  --fg: #131D2E;
+  --muted: #5C6A80;
+  --accent: #9A6F14;
+  --accent-soft: #F5ECD8;
+  --on-accent: #FFFFFF;
+  --up: #0F7A55;
+  --up-soft: #E1F3EB;
+  --down: #C2303A;
+  --down-soft: #FBE5E6;
+  --warn: #B4440C;
+  --warn-soft: #FCEBDD;
+  --grid: #E7ECF3;
+  --shadow: 0 1px 2px rgba(19, 29, 46, .06), 0 4px 16px rgba(19, 29, 46, .05);
+  --font-display: "Readex Pro", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif;
+  --font-body: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --r: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0A111E; --surface: #101A2C; --surface-2: #15223A; --line: #223250; --fg: #E4EBF5; --muted: #8B99B2;
+    --accent: #D9AA4A; --accent-soft: #2A2416; --on-accent: #1A1406;
+    --up: #34C48B; --up-soft: #0F2A21; --down: #F25C64; --down-soft: #33161A; --warn: #F39255; --warn-soft: #33200F;
+    --grid: #16233A; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0A111E; --surface: #101A2C; --surface-2: #15223A; --line: #223250; --fg: #E4EBF5; --muted: #8B99B2;
+  --accent: #D9AA4A; --accent-soft: #2A2416; --on-accent: #1A1406;
+  --up: #34C48B; --up-soft: #0F2A21; --down: #F25C64; --down-soft: #33161A; --warn: #F39255; --warn-soft: #33200F;
+  --grid: #16233A; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--fg);
+  font: 15px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 32px;
+}
+.num, .tnum { font-family: var(--font-num); font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1380px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+
+/* Header */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: var(--bg); padding-block: 12px 10px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 25; background: var(--bg); }
+.brand { display: flex; align-items: baseline; gap: 10px; margin-inline-end: auto; }
+.brand h1 { font: 700 22px/1 var(--font-display); margin: 0; letter-spacing: -.2px; }
+.brand h1 .mark { color: var(--accent); }
+.brand small { color: var(--muted); font-size: 12px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); white-space: nowrap; }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.pill.open { color: var(--up); background: var(--up-soft); border-color: transparent; }
+.pill.closed { color: var(--muted); }
+.pill.pre, .pill.post { color: var(--warn); background: var(--warn-soft); border-color: transparent; }
+.pill.live .dot { animation: pulse 1.4s infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.icon-btn { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; height: 36px; min-width: 36px; padding: 0 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13.5px; }
+.icon-btn:hover { border-color: var(--accent); }
+
+.banner { border-radius: var(--r); padding: 10px 14px; font-size: 13.5px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.banner.demo { background: var(--warn-soft); color: var(--fg); border: 1px dashed var(--warn); }
+.banner.demo b { color: var(--warn); }
+.banner.err { background: var(--down-soft); border: 1px solid var(--down); }
+.banner .btn { margin-inline-start: auto; }
+
+/* Symbol bar */
+.symbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.search { position: relative; }
+.search input { width: 170px; height: 40px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); padding: 0 12px; font-family: var(--font-num); text-transform: uppercase; direction: ltr; text-align: left; }
+.suggest { position: absolute; top: 44px; inset-inline-start: 0; width: 300px; max-width: 80vw; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); z-index: 30; overflow: hidden; }
+.suggest button { display: flex; width: 100%; gap: 10px; justify-content: space-between; padding: 8px 12px; background: none; border: 0; cursor: pointer; text-align: start; font-size: 13px; }
+.suggest button:hover { background: var(--surface-2); }
+.watch { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1 1 260px; min-width: 0; }
+.watch::-webkit-scrollbar { display: none; }
+.chip { flex: none; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 4px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); cursor: pointer; line-height: 1.3; }
+.chip b { font: 600 12.5px var(--font-num); }
+.chip span { font: 11.5px var(--font-num); color: var(--muted); }
+.chip.on { border-color: var(--accent); background: var(--accent-soft); }
+.chip .up { color: var(--up); } .chip .down { color: var(--down); }
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 8px; padding: 3px; border: 1px solid var(--line); }
+.seg button { border: 0; background: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font: 600 12.5px var(--font-num); color: var(--muted); }
+.seg button.on { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+
+/* Main grid */
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 14px; align-items: start; }
+@media (max-width: 1080px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); min-width: 0; }
+.card-h { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.card-h h2, .card-h h3 { font: 600 15px var(--font-display); margin: 0; }
+.card-b { padding: 14px; }
+.muted { color: var(--muted); }
+.small { font-size: 12.5px; }
+
+.quote { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; padding: 14px; border-bottom: 1px solid var(--line); }
+.quote .name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.quote .sym { font: 700 20px var(--font-num); }
+.quote .co { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+.quote .px { font: 600 32px/1 var(--font-num); letter-spacing: -.5px; transition: color .25s; }
+.quote .chg { font: 600 14px var(--font-num); }
+.quote .meta { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12.5px; margin-inline-start: auto; }
+.quote .meta .num { color: var(--fg); }
+.up { color: var(--up); } .down { color: var(--down); }
+.flash-up { color: var(--up) !important; } .flash-down { color: var(--down) !important; }
+
+.chart-tools { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 14px; border-bottom: 1px solid var(--line); align-items: center; }
+.toggle { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; color: var(--muted); }
+.toggle.on { color: var(--fg); border-color: var(--fg); }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--muted); margin-inline-start: auto; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-inline-end: 4px; }
+.chart-box { position: relative; direction: ltr; }
+#chart { height: clamp(300px, 52vh, 520px); }
+#rsiChart { height: 110px; border-top: 1px solid var(--line); }
+.chart-note { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 14px; text-align: center; padding: 20px; direction: rtl; pointer-events: none; }
+.rsi-label { position: absolute; top: 4px; left: 8px; font: 11px var(--font-num); color: var(--muted); z-index: 3; pointer-events: none; }
+
+/* Decision rail */
+.rail { display: flex; flex-direction: column; gap: 14px; }
+.verdict { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.verdict-top { display: flex; align-items: center; gap: 12px; }
+.decision { font: 700 26px/1 var(--font-display); padding: 10px 16px; border-radius: 10px; }
+.decision.BUY { background: var(--up-soft); color: var(--up); }
+.decision.WAIT { background: var(--warn-soft); color: var(--warn); }
+.decision.AVOID { background: var(--down-soft); color: var(--down); }
+.decision.NONE { background: var(--surface-2); color: var(--muted); }
+.gauge { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.gauge-bar { position: relative; height: 8px; border-radius: 99px; background: linear-gradient(to left, var(--up) 0%, var(--surface-2) 50%, var(--down) 100%); opacity: .9; }
+.gauge-bar .needle { position: absolute; top: -4px; width: 4px; height: 16px; border-radius: 2px; background: var(--fg); transform: translateX(50%); transition: right .4s; }
+.gauge-l { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
+.reasons { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
+.reasons li::before { content: "•"; color: var(--accent); margin-inline-end: 6px; }
+
+.levels { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.lv { background: var(--surface); padding: 9px 12px; display: flex; flex-direction: column; gap: 2px; }
+.lv .k { font-size: 11.5px; color: var(--muted); }
+.lv .v { font: 600 16px var(--font-num); }
+.lv.full { grid-column: 1 / -1; }
+.lv.stop .v { color: var(--down); } .lv.tgt .v { color: var(--up); } .lv.entry .v { color: var(--accent); }
+.kv { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.kv:last-child { border-bottom: 0; }
+.kv .num { font-weight: 600; }
+.timing { display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; }
+.timing div { display: grid; grid-template-columns: 92px 1fr; gap: 8px; }
+.timing b { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+.guards { display: flex; flex-direction: column; gap: 6px; }
+.guard { font-size: 13px; padding: 7px 10px; border-radius: 8px; background: var(--warn-soft); border-inline-start: 3px solid var(--warn); }
+.guard.hard { background: var(--down-soft); border-color: var(--down); }
+
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 9px 14px; cursor: pointer; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.buy { background: var(--up); color: #fff; border-color: var(--up); }
+.btn.danger { color: var(--down); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-row .btn { flex: 1 1 auto; }
+
+/* Tabs */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); padding: 0 8px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button { border: 0; background: none; padding: 12px 12px 10px; cursor: pointer; font: 600 14px var(--font-body); color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
+.tabs button.on { color: var(--fg); border-bottom-color: var(--accent); }
+.tabs .count { font: 11px var(--font-num); background: var(--surface-2); border-radius: 99px; padding: 1px 6px; margin-inline-start: 4px; }
+.panel { padding: 14px; }
+
+table.ind { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.ind th, table.ind td { text-align: start; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.ind th { font-size: 12px; color: var(--muted); font-weight: 600; }
+table.ind td.num { text-align: left; white-space: nowrap; }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+.tag.pos { background: var(--up-soft); color: var(--up); }
+.tag.neg { background: var(--down-soft); color: var(--down); }
+.tag.neu { background: var(--surface-2); color: var(--muted); }
+.tag.acc { background: var(--accent-soft); color: var(--accent); }
+.table-scroll { overflow-x: auto; }
+
+.list { display: flex; flex-direction: column; gap: 10px; }
+.item { padding: 12px; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.item-h { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.item-h b { font-size: 14px; }
+.item p { margin: 0; font-size: 13.5px; color: var(--muted); }
+.news-item a { color: var(--fg); text-decoration: none; font-weight: 600; direction: ltr; text-align: left; unicode-bidi: plaintext; }
+.news-item a:hover { color: var(--accent); }
+.news-item p { direction: ltr; text-align: left; unicode-bidi: plaintext; }
+
+/* AI */
+.ai-empty { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.ai-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.ai-sec { border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+.ai-sec h4 { margin: 0 0 6px; font: 600 13.5px var(--font-display); color: var(--muted); }
+.ai-sec p { margin: 0; font-size: 14px; }
+.ai-sec ul { margin: 0; padding-inline-start: 18px; font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+.ai-sec.bull { border-inline-start: 3px solid var(--up); }
+.ai-sec.bear { border-inline-start: 3px solid var(--down); }
+.ai-sec.wide { grid-column: 1 / -1; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+.check input { margin-top: 5px; accent-color: var(--accent); }
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.warnbox { background: var(--warn-soft); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; }
+
+/* Paper trading */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.stat { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.stat .k { font-size: 12px; color: var(--muted); }
+.stat .v { font: 600 18px var(--font-num); }
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); min-width: 0; }
+.field input, .field select, .field textarea { height: 38px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); padding: 0 10px; color: var(--fg); font-size: 14px; min-width: 0; }
+.field input.num { text-align: left; }
+.field textarea { height: auto; padding: 10px; }
+.field.wide { grid-column: 1 / -1; }
+.inline-confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13.5px; }
+
+/* Modal */
+.modal { position: fixed; inset: 0; z-index: 50; background: rgba(5, 10, 20, .55); display: grid; place-items: center; padding: 16px; padding-top: calc(16px + env(safe-area-inset-top, 0px)); padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+.modal-box { background: var(--surface); color: var(--fg); border-radius: 12px; width: min(720px, 100%); max-height: 100%; overflow: auto; box-shadow: var(--shadow); border: 1px solid var(--line); }
+.modal-box .card-h { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.modal-box .x { margin-inline-start: auto; }
+.prompt-text { width: 100%; height: 300px; font: 12px/1.5 var(--font-num); direction: ltr; text-align: left; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--surface-2); color: var(--fg); resize: vertical; }
+.steps { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.keyhint { font-size: 12px; color: var(--muted); direction: ltr; text-align: left; }
+
+/* Toasts */
+.toasts { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); z-index: 60; display: flex; flex-direction: column; gap: 8px; width: min(360px, calc(100vw - 32px)); }
+.toast { background: var(--fg); color: var(--bg); border-radius: 10px; padding: 10px 14px; font-size: 14px; box-shadow: var(--shadow); animation: tin .25s ease-out; }
+.toast.up { border-inline-start: 4px solid var(--up); } .toast.down { border-inline-start: 4px solid var(--down); } .toast.warn { border-inline-start: 4px solid var(--warn); }
+@keyframes tin { from { transform: translateY(8px); opacity: 0; } }
+footer { color: var(--muted); font-size: 12.5px; line-height: 1.7; border-top: 1px solid var(--line); padding-top: 14px; }
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+@media (max-width: 560px) {
+  .quote .px { font-size: 28px; }
+  .quote .meta { margin-inline-start: 0; width: 100%; }
+  .decision { font-size: 22px; }
+  .search input { width: 130px; }
+  .brand small { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand"><h1><span class="mark">مِرصاد</span></h1><small>منصة تحليل ومضاربة تجريبية للأسهم الأمريكية</small></div>
+    <span id="mkt" class="pill closed"><span class="dot"></span><span id="mktText">السوق</span></span>
+    <span id="feed" class="pill"><span class="dot"></span><span id="feedText">غير متصل</span></span>
+    <button class="icon-btn" id="themeBtn" title="تبديل المظهر" aria-label="تبديل المظهر"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
+    <button class="icon-btn" id="settingsBtn">⚙︎ الإعدادات</button>
+  </header>
+
+  <div id="demoBanner" class="banner demo" hidden>
+    <span><b>وضع تجريبي:</b> الأسعار والأخبار هنا محاكاة عشوائية للتدريب على الواجهة فقط، وليست أسعاراً حقيقية.</span>
+    <button class="btn primary" id="goLiveBtn">ربط البيانات الحقيقية</button>
+  </div>
+  <div id="errBanner" class="banner err" hidden></div>
+
+  <div class="symbar">
+    <div class="search">
+      <input id="symInput" aria-label="رمز السهم" placeholder="AAPL" autocomplete="off" spellcheck="false">
+      <div id="suggest" class="suggest" hidden></div>
+    </div>
+    <div class="seg" id="tfSeg" role="group" aria-label="الإطار الزمني">
+      <button data-tf="1min">1د</button><button data-tf="5min">5د</button><button data-tf="15min">15د</button><button data-tf="1h">1س</button><button data-tf="1day">يومي</button>
+    </div>
+    <div class="watch" id="watch"></div>
+  </div>
+
+  <div class="main">
+    <section class="card" aria-label="الرسم البياني">
+      <div class="quote">
+        <div class="name"><span class="sym num" id="qSym">—</span><span class="co" id="qName">—</span></div>
+        <span class="px num" id="qPx">—</span>
+        <span class="chg num" id="qChg"></span>
+        <div class="meta">
+          <span>الافتتاح <span class="num" id="qO">—</span></span>
+          <span>الأعلى <span class="num" id="qH">—</span></span>
+          <span>الأدنى <span class="num" id="qL">—</span></span>
+          <span>آخر صفقة <span class="num" id="qT">—</span></span>
+        </div>
+      </div>
+      <div class="chart-tools">
+        <button class="toggle" data-ov="ema">EMA 9/21</button>
+        <button class="toggle" data-ov="vwap">VWAP</button>
+        <button class="toggle" data-ov="bb">بولنجر</button>
+        <button class="toggle" data-ov="levels">دعوم ومقاومات</button>
+        <button class="toggle" data-ov="plan">خطة الصفقة</button>
+        <button class="toggle" data-ov="marks">الأنماط</button>
+        <div class="legend"><span><i style="background:var(--accent)"></i>EMA9</span><span><i style="background:var(--muted)"></i>EMA21</span><span><i style="background:#7C8CF8"></i>VWAP</span></div>
+      </div>
+      <div class="chart-box">
+        <div id="chart"></div>
+        <div id="chartNote" class="chart-note" hidden></div>
+      </div>
+      <div class="chart-box"><span class="rsi-label">RSI 14</span><div id="rsiChart"></div></div>
+    </section>
+
+    <aside class="rail">
+      <section class="card verdict" aria-label="القرار">
+        <div class="verdict-top">
+          <span id="decision" class="decision NONE">—</span>
+          <div class="gauge">
+            <div class="gauge-l"><span>قوة الإشارة</span><span class="num" id="scoreTxt">0</span></div>
+            <div class="gauge-bar"><span class="needle" id="needle" style="right:50%"></span></div>
+            <div class="gauge-l"><span>إيجابي +100</span><span>−100 سلبي</span></div>
+          </div>
+        </div>
+        <div class="small muted" id="setupTxt"></div>
+        <ul class="reasons" id="reasons"></ul>
+      </section>
+
+      <section class="card" aria-label="خطة الصفقة">
+        <div class="card-h"><h3>خطة الصفقة المقترحة</h3><span class="tag acc" id="planSrc">المحرك الآلي</span></div>
+        <div class="card-b" style="display:flex;flex-direction:column;gap:12px">
+          <div class="levels" id="levelsGrid"></div>
+          <div id="planKv"></div>
+          <div class="timing" id="timing"></div>
+          <div class="guards" id="guards"></div>
+          <div class="btn-row">
+            <button class="btn buy" id="paperBuyBtn">شراء تجريبي</button>
+            <button class="btn primary" id="aiBtn">حلّل بالذكاء الاصطناعي</button>
+          </div>
+          <button class="btn" id="copyPromptBtn">انسخ البرومبت والبيانات لـ Claude</button>
+          <div id="buyForm" hidden></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <section class="card" aria-label="تفاصيل التحليل">
+    <nav class="tabs" id="tabs">
+      <button data-tab="ai" class="on">تحليل الذكاء الاصطناعي</button>
+      <button data-tab="tech">التحليل الفني</button>
+      <button data-tab="pat">الأنماط <span class="count num" id="patCount">0</span></button>
+      <button data-tab="news">الأخبار <span class="count num" id="newsCount">0</span></button>
+      <button data-tab="paper">المحفظة التجريبية <span class="count num" id="posCount">0</span></button>
+    </nav>
+    <div class="panel" data-panel="ai" id="aiPanel"></div>
+    <div class="panel" data-panel="tech" id="techPanel" hidden></div>
+    <div class="panel" data-panel="pat" id="patPanel" hidden></div>
+    <div class="panel" data-panel="news" id="newsPanel" hidden></div>
+    <div class="panel" data-panel="paper" id="paperPanel" hidden></div>
+  </section>
+
+  <footer>
+    مِرصاد أداة تعليمية وتحليلية. القرارات فيها ناتجة عن قواعد حسابية ونموذج ذكاء اصطناعي، وقد تخطئ. ليست توصية استثمارية ولا بديلاً عن مستشار مالي مرخّص. ابدأ بالتداول التجريبي، والتزم بوقف الخسارة، ولا تخاطر بمال لا تتحمل خسارته.
+    مصادر البيانات: Finnhub (صفقات لحظية وأخبار) و Twelve Data (الشموع التاريخية). الرسم البياني: TradingView Lightweight Charts.
+  </footer>
+</div>
+
+<div id="modal" class="modal" hidden></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<script>if(!window.LightweightCharts){document.write('<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"><\/script>');}</script>
+<script>/* Mirsad analysis engine — pure functions, no DOM.
+   bars: [{time (unix s), open, high, low, close, volume}] ascending. */
+(function (root) {
+  'use strict';
+
+  const last = (a) => a[a.length - 1];
+  const round2 = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 100) / 100);
+
+  function sma(vals, p) {
+    const out = new Array(vals.length).fill(null);
+    let sum = 0;
+    for (let i = 0; i < vals.length; i++) {
+      sum += vals[i];
+      if (i >= p) sum -= vals[i - p];
+      if (i >= p - 1) out[i] = sum / p;
+    }
+    return out;
+  }
+
+  function ema(vals, p) {
+    const out = new Array(vals.length).fill(null);
+    if (vals.length < p) return out;
+    const k = 2 / (p + 1);
+    let seed = 0;
+    for (let i = 0; i < p; i++) seed += vals[i];
+    let prev = seed / p;
+    out[p - 1] = prev;
+    for (let i = p; i < vals.length; i++) {
+      prev = vals[i] * k + prev * (1 - k);
+      out[i] = prev;
+    }
+    return out;
+  }
+
+  function rsi(closes, p = 14) {
+    const out = new Array(closes.length).fill(null);
+    if (closes.length <= p) return out;
+    let gain = 0, loss = 0;
+    for (let i = 1; i <= p; i++) {
+      const d = closes[i] - closes[i - 1];
+      if (d >= 0) gain += d; else loss -= d;
+    }
+    let ag = gain / p, al = loss / p;
+    out[p] = al === 0 ? 100 : 100 - 100 / (1 + ag / al);
+    for (let i = p + 1; i < closes.length; i++) {
+      const d = closes[i] - closes[i - 1];
+      ag = (ag * (p - 1) + Math.max(d, 0)) / p;
+      al = (al * (p - 1) + Math.max(-d, 0)) / p;
+      out[i] = al === 0 ? 100 : 100 - 100 / (1 + ag / al);
+    }
+    return out;
+  }
+
+  function macd(closes, f = 12, s = 26, sig = 9) {
+    const ef = ema(closes, f), es = ema(closes, s);
+    const line = closes.map((_, i) => (ef[i] != null && es[i] != null ? ef[i] - es[i] : null));
+    const start = line.findIndex((v) => v != null);
+    const signal = new Array(closes.length).fill(null);
+    if (start >= 0) {
+      const sub = ema(line.slice(start), sig);
+      sub.forEach((v, j) => { signal[start + j] = v; });
+    }
+    const hist = line.map((v, i) => (v != null && signal[i] != null ? v - signal[i] : null));
+    return { line, signal, hist };
+  }
+
+  function bollinger(closes, p = 20, mult = 2) {
+    const mid = sma(closes, p);
+    const upper = [], lower = [];
+    for (let i = 0; i < closes.length; i++) {
+      if (mid[i] == null) { upper.push(null); lower.push(null); continue; }
+      let v = 0;
+      for (let j = i - p + 1; j <= i; j++) v += (closes[j] - mid[i]) ** 2;
+      const sd = Math.sqrt(v / p);
+      upper.push(mid[i] + mult * sd); lower.push(mid[i] - mult * sd);
+    }
+    return { mid, upper, lower };
+  }
+
+  function trueRanges(bars) {
+    return bars.map((b, i) => (i === 0 ? b.high - b.low :
+      Math.max(b.high - b.low, Math.abs(b.high - bars[i - 1].close), Math.abs(b.low - bars[i - 1].close))));
+  }
+
+  function atr(bars, p = 14) {
+    const tr = trueRanges(bars);
+    const out = new Array(bars.length).fill(null);
+    if (bars.length < p) return out;
+    let a = 0;
+    for (let i = 0; i < p; i++) a += tr[i];
+    a /= p; out[p - 1] = a;
+    for (let i = p; i < bars.length; i++) { a = (a * (p - 1) + tr[i]) / p; out[i] = a; }
+    return out;
+  }
+
+  function adx(bars, p = 14) {
+    const n = bars.length;
+    const out = { adx: new Array(n).fill(null), pdi: new Array(n).fill(null), mdi: new Array(n).fill(null) };
+    if (n < p * 2 + 1) return out;
+    const tr = trueRanges(bars);
+    let trS = 0, pS = 0, mS = 0;
+    const dx = new Array(n).fill(null);
+    for (let i = 1; i < n; i++) {
+      const up = bars[i].high - bars[i - 1].high;
+      const dn = bars[i - 1].low - bars[i].low;
+      const pdm = up > dn && up > 0 ? up : 0;
+      const mdm = dn > up && dn > 0 ? dn : 0;
+      if (i <= p) { trS += tr[i]; pS += pdm; mS += mdm; if (i < p) continue; }
+      else { trS = trS - trS / p + tr[i]; pS = pS - pS / p + pdm; mS = mS - mS / p + mdm; }
+      const pdi = trS ? (100 * pS) / trS : 0, mdi = trS ? (100 * mS) / trS : 0;
+      out.pdi[i] = pdi; out.mdi[i] = mdi;
+      dx[i] = pdi + mdi ? (100 * Math.abs(pdi - mdi)) / (pdi + mdi) : 0;
+    }
+    let a = 0, cnt = 0;
+    for (let i = p; i < n; i++) {
+      if (dx[i] == null) continue;
+      if (cnt < p) { a += dx[i]; cnt++; if (cnt === p) { a /= p; out.adx[i] = a; } }
+      else { a = (a * (p - 1) + dx[i]) / p; out.adx[i] = a; }
+    }
+    return out;
+  }
+
+  // Session VWAP; sessionKey(bar) returns a key per trading day.
+  function vwap(bars, sessionKey) {
+    const out = new Array(bars.length).fill(null);
+    let key = null, pv = 0, vv = 0;
+    for (let i = 0; i < bars.length; i++) {
+      const k = sessionKey(bars[i]);
+      if (k !== key) { key = k; pv = 0; vv = 0; }
+      const tp = (bars[i].high + bars[i].low + bars[i].close) / 3;
+      pv += tp * (bars[i].volume || 0); vv += bars[i].volume || 0;
+      out[i] = vv > 0 ? pv / vv : tp;
+    }
+    return out;
+  }
+
+  function swings(bars, left = 3, right = 3) {
+    const highs = [], lows = [];
+    for (let i = left; i < bars.length - right; i++) {
+      let isH = true, isL = true;
+      for (let j = i - left; j <= i + right; j++) {
+        if (j === i) continue;
+        if (bars[j].high >= bars[i].high) isH = false;
+        if (bars[j].low <= bars[i].low) isL = false;
+      }
+      if (isH) highs.push({ i, price: bars[i].high, time: bars[i].time });
+      if (isL) lows.push({ i, price: bars[i].low, time: bars[i].time });
+    }
+    return { highs, lows };
+  }
+
+  // Cluster swing points into horizontal levels.
+  function levels(bars, sw, atrVal) {
+    const pts = [...sw.highs.map((p) => ({ ...p, k: 'h' })), ...sw.lows.map((p) => ({ ...p, k: 'l' }))]
+      .sort((a, b) => a.price - b.price);
+    const tol = Math.max(atrVal * 0.6, last(bars).close * 0.0015);
+    const clusters = [];
+    for (const p of pts) {
+      const c = clusters.find((c) => Math.abs(c.price - p.price) <= tol);
+      if (c) { c.members.push(p); c.price = c.members.reduce((s, m) => s + m.price, 0) / c.members.length; c.lastI = Math.max(c.lastI, p.i); }
+      else clusters.push({ price: p.price, members: [p], lastI: p.i });
+    }
+    const n = bars.length, px = last(bars).close;
+    const scored = clusters.map((c) => ({
+      price: c.price,
+      touches: c.members.length,
+      lastI: c.lastI,
+      strength: c.members.length + (c.lastI > n - 40 ? 1 : 0),
+    }));
+    const supports = scored.filter((l) => l.price < px).sort((a, b) => b.price - a.price).slice(0, 3);
+    const resistances = scored.filter((l) => l.price > px).sort((a, b) => a.price - b.price).slice(0, 3);
+    // Range extremes as fallback levels
+    const look = bars.slice(-Math.min(120, n));
+    const hi = Math.max(...look.map((b) => b.high)), lo = Math.min(...look.map((b) => b.low));
+    if (!resistances.length && hi > px) resistances.push({ price: hi, touches: 1, lastI: n - 1, strength: 1 });
+    if (!supports.length && lo < px) supports.push({ price: lo, touches: 1, lastI: n - 1, strength: 1 });
+    return { supports, resistances, all: scored };
+  }
+
+  function candlePatterns(bars, trendDown, trendUp) {
+    const out = [];
+    const n = bars.length;
+    if (n < 3) return out;
+    const b = bars[n - 1], p = bars[n - 2];
+    const body = Math.abs(b.close - b.open), range = b.high - b.low || 1e-9;
+    const upW = b.high - Math.max(b.open, b.close), loW = Math.min(b.open, b.close) - b.low;
+    const pBody = Math.abs(p.close - p.open);
+    if (b.close > b.open && p.close < p.open && b.close >= p.open && b.open <= p.close && body > pBody * 1.05)
+      out.push({ id: 'bull_engulf', name: 'ابتلاع شرائي (Bullish Engulfing)', bias: 1, strength: trendDown ? 2 : 1, i: n - 1, desc: 'شمعة صاعدة تبتلع جسم الشمعة الهابطة السابقة، إشارة انعكاس محتملة.' });
+    if (b.close < b.open && p.close > p.open && b.open >= p.close && b.close <= p.open && body > pBody * 1.05)
+      out.push({ id: 'bear_engulf', name: 'ابتلاع بيعي (Bearish Engulfing)', bias: -1, strength: trendUp ? 2 : 1, i: n - 1, desc: 'شمعة هابطة تبتلع جسم الشمعة الصاعدة السابقة، ضغط بيع.' });
+    if (loW >= 2 * body && upW <= body * 0.6 && body / range < 0.4 && trendDown)
+      out.push({ id: 'hammer', name: 'المطرقة (Hammer)', bias: 1, strength: 1, i: n - 1, desc: 'ذيل سفلي طويل بعد هبوط، المشترون رفضوا الأسعار المنخفضة.' });
+    if (upW >= 2 * body && loW <= body * 0.6 && body / range < 0.4 && trendUp)
+      out.push({ id: 'shooting_star', name: 'الشهاب (Shooting Star)', bias: -1, strength: 1, i: n - 1, desc: 'ذيل علوي طويل بعد صعود، البائعون رفضوا الأسعار المرتفعة.' });
+    if (body / range <= 0.1 && range > 0)
+      out.push({ id: 'doji', name: 'دوجي (Doji)', bias: 0, strength: 1, i: n - 1, desc: 'تردد وتوازن بين المشترين والبائعين، انتظر تأكيد الشمعة التالية.' });
+    return out;
+  }
+
+  function chartPatterns(bars, sw, atrVal, ind) {
+    const out = [];
+    const n = bars.length, px = last(bars).close;
+    const H = sw.highs, L = sw.lows;
+    // Structure
+    let structure = 'range';
+    if (H.length >= 2 && L.length >= 2) {
+      const [h1, h2] = H.slice(-2), [l1, l2] = L.slice(-2);
+      if (h2.price > h1.price && l2.price > l1.price) structure = 'up';
+      else if (h2.price < h1.price && l2.price < l1.price) structure = 'down';
+    }
+    if (structure === 'up') out.push({ id: 'hh_hl', name: 'قمم وقيعان صاعدة (HH/HL)', bias: 1, strength: 2, i: last(L).i, desc: 'هيكل اتجاه صاعد: كل قمة أعلى من السابقة وكل قاع أعلى من السابق.' });
+    if (structure === 'down') out.push({ id: 'lh_ll', name: 'قمم وقيعان هابطة (LH/LL)', bias: -1, strength: 2, i: last(H).i, desc: 'هيكل اتجاه هابط: قمم أدنى وقيعان أدنى.' });
+
+    // Breakout / breakdown vs prior range (exclude last 2 bars)
+    if (n > 30) {
+      const prior = bars.slice(n - 32, n - 2);
+      const pHi = Math.max(...prior.map((b) => b.high)), pLo = Math.min(...prior.map((b) => b.low));
+      const rv = ind.relVol;
+      if (px > pHi && rv >= 1.3) out.push({ id: 'breakout', name: 'اختراق مقاومة بحجم (Breakout)', bias: 1, strength: 3, i: n - 1, level: pHi, desc: `الإغلاق فوق أعلى سعر لآخر 30 شمعة (${pHi.toFixed(2)}) مع حجم أعلى من المتوسط ×${rv.toFixed(1)}.` });
+      else if (px > pHi) out.push({ id: 'breakout_weak', name: 'اختراق بدون حجم', bias: 1, strength: 1, i: n - 1, level: pHi, desc: `اختراق ${pHi.toFixed(2)} لكن الحجم ضعيف، احتمال اختراق كاذب.` });
+      if (px < pLo && rv >= 1.3) out.push({ id: 'breakdown', name: 'كسر دعم بحجم (Breakdown)', bias: -1, strength: 3, i: n - 1, level: pLo, desc: `الإغلاق تحت أدنى سعر لآخر 30 شمعة (${pLo.toFixed(2)}) مع حجم مرتفع.` });
+    }
+
+    // Double top / bottom
+    if (H.length >= 2) {
+      const [a, b] = H.slice(-2);
+      if (b.i - a.i >= 5 && Math.abs(a.price - b.price) <= atrVal * 0.5 && n - 1 - b.i <= 25 && px <= Math.max(a.price, b.price) + 0.3 * atrVal) {
+        const trough = Math.min(...bars.slice(a.i, b.i + 1).map((x) => x.low));
+        if ((a.price - trough) >= atrVal * 1.2) {
+          const confirmed = px < trough;
+          out.push({ id: 'double_top', name: confirmed ? 'قمة مزدوجة مؤكدة (Double Top)' : 'قمة مزدوجة محتملة', bias: -1, strength: confirmed ? 3 : 1, i: b.i, level: trough, desc: `قمتان متقاربتان عند ~${b.price.toFixed(2)}، خط العنق ${trough.toFixed(2)}${confirmed ? ' وتم كسره.' : '، التأكيد بكسره.'}` });
+        }
+      }
+    }
+    if (L.length >= 2) {
+      const [a, b] = L.slice(-2);
+      if (b.i - a.i >= 5 && Math.abs(a.price - b.price) <= atrVal * 0.5 && n - 1 - b.i <= 25 && px >= Math.min(a.price, b.price) - 0.3 * atrVal) {
+        const peak = Math.max(...bars.slice(a.i, b.i + 1).map((x) => x.high));
+        if ((peak - a.price) >= atrVal * 1.2) {
+          const confirmed = px > peak;
+          out.push({ id: 'double_bottom', name: confirmed ? 'قاع مزدوج مؤكد (Double Bottom)' : 'قاع مزدوج محتمل', bias: 1, strength: confirmed ? 3 : 1, i: b.i, level: peak, desc: `قاعان متقاربان عند ~${b.price.toFixed(2)}، خط العنق ${peak.toFixed(2)}${confirmed ? ' وتم اختراقه.' : '، التأكيد باختراقه.'}` });
+        }
+      }
+    }
+
+    // Flags: strong pole then tight consolidation
+    if (n > 25) {
+      for (const dir of [1, -1]) {
+        let found = null;
+        for (let cons = 3; cons <= 12 && !found; cons++) {
+          const poleEnd = n - 1 - cons;
+          for (let poleLen = 3; poleLen <= 8; poleLen++) {
+            const poleStart = poleEnd - poleLen;
+            if (poleStart < 0) break;
+            const move = (bars[poleEnd].close - bars[poleStart].open) * dir;
+            if (move < atrVal * 3) continue;
+            const seg = bars.slice(poleEnd + 1);
+            const segHi = Math.max(...seg.map((x) => x.high)), segLo = Math.min(...seg.map((x) => x.low));
+            const mid = (bars[poleEnd].close + bars[poleStart].open) / 2;
+            const tight = segHi - segLo <= move * 0.5;
+            const holds = dir === 1 ? segLo > mid : segHi < mid;
+            if (tight && holds) { found = { poleStart, poleEnd, segHi, segLo, move }; break; }
+          }
+        }
+        if (found) {
+          out.push(dir === 1
+            ? { id: 'bull_flag', name: 'علم صاعد (Bull Flag)', bias: 1, strength: 2, i: n - 1, level: found.segHi, desc: `اندفاع قوي ثم تماسك ضيق. الشراء عادة عند اختراق ${found.segHi.toFixed(2)}.` }
+            : { id: 'bear_flag', name: 'علم هابط (Bear Flag)', bias: -1, strength: 2, i: n - 1, level: found.segLo, desc: `هبوط حاد ثم تماسك ضيق، خطر استمرار الهبوط تحت ${found.segLo.toFixed(2)}.` });
+        }
+      }
+    }
+
+    // Triangles from last 3 swings
+    if (H.length >= 2 && L.length >= 2) {
+      const hs = H.slice(-3), ls = L.slice(-3);
+      const flatTop = Math.max(...hs.map((h) => h.price)) - Math.min(...hs.map((h) => h.price)) <= atrVal * 0.5;
+      const flatBot = Math.max(...ls.map((l) => l.price)) - Math.min(...ls.map((l) => l.price)) <= atrVal * 0.5;
+      const risingLows = ls.every((l, k) => k === 0 || l.price > ls[k - 1].price);
+      const fallingHighs = hs.every((h, k) => k === 0 || h.price < hs[k - 1].price);
+      const recent = n - 1 - Math.max(last(hs).i, last(ls).i) <= 20;
+      if (recent && flatTop && risingLows && hs.length >= 2) out.push({ id: 'asc_tri', name: 'مثلث صاعد (Ascending Triangle)', bias: 1, strength: 2, i: n - 1, level: Math.max(...hs.map((h) => h.price)), desc: `مقاومة أفقية مع قيعان صاعدة، الاختراق فوق ${Math.max(...hs.map((h) => h.price)).toFixed(2)} يؤكده.` });
+      if (recent && flatBot && fallingHighs && ls.length >= 2) out.push({ id: 'desc_tri', name: 'مثلث هابط (Descending Triangle)', bias: -1, strength: 2, i: n - 1, level: Math.min(...ls.map((l) => l.price)), desc: `دعم أفقي مع قمم هابطة، كسر ${Math.min(...ls.map((l) => l.price)).toFixed(2)} يؤكده.` });
+    }
+
+    // RSI divergence on last two swing lows/highs
+    const r = ind.rsiArr;
+    if (L.length >= 2) {
+      const [a, b] = L.slice(-2);
+      if (r[a.i] != null && r[b.i] != null && b.price < a.price && r[b.i] > r[a.i] + 2 && n - 1 - b.i <= 15)
+        out.push({ id: 'bull_div', name: 'دايفرجنس إيجابي (RSI)', bias: 1, strength: 2, i: b.i, desc: 'السعر سجّل قاعاً أدنى بينما RSI سجّل قاعاً أعلى: ضعف في البيع.' });
+    }
+    if (H.length >= 2) {
+      const [a, b] = H.slice(-2);
+      if (r[a.i] != null && r[b.i] != null && b.price > a.price && r[b.i] < r[a.i] - 2 && n - 1 - b.i <= 15)
+        out.push({ id: 'bear_div', name: 'دايفرجنس سلبي (RSI)', bias: -1, strength: 2, i: b.i, desc: 'السعر سجّل قمة أعلى بينما RSI سجّل قمة أدنى: ضعف في الشراء.' });
+    }
+
+    // EMA crossover in last 3 bars
+    const e9 = ind.ema9Arr, e21 = ind.ema21Arr;
+    for (let k = n - 3; k < n; k++) {
+      if (k < 1 || e9[k] == null || e21[k] == null || e9[k - 1] == null || e21[k - 1] == null) continue;
+      if (e9[k - 1] <= e21[k - 1] && e9[k] > e21[k]) out.push({ id: 'ema_cross_up', name: 'تقاطع إيجابي EMA9/21', bias: 1, strength: 1, i: k, desc: 'المتوسط السريع قطع البطيء للأعلى: زخم صاعد قصير المدى.' });
+      if (e9[k - 1] >= e21[k - 1] && e9[k] < e21[k]) out.push({ id: 'ema_cross_dn', name: 'تقاطع سلبي EMA9/21', bias: -1, strength: 1, i: k, desc: 'المتوسط السريع قطع البطيء للأسفل: زخم هابط قصير المدى.' });
+    }
+    return { patterns: out, structure };
+  }
+
+  function computeIndicators(bars, opts = {}) {
+    const closes = bars.map((b) => b.close);
+    const vols = bars.map((b) => b.volume || 0);
+    const ema9Arr = ema(closes, 9), ema21Arr = ema(closes, 21);
+    const sma50Arr = sma(closes, 50), sma200Arr = sma(closes, 200);
+    const rsiArr = rsi(closes, 14);
+    const m = macd(closes);
+    const bb = bollinger(closes);
+    const atrArr = atr(bars, 14);
+    const ad = adx(bars, 14);
+    const vwapArr = opts.sessionKey ? vwap(bars, opts.sessionKey) : new Array(bars.length).fill(null);
+    const volAvgArr = sma(vols, 20);
+    const n = bars.length;
+    // relative volume: use the last COMPLETED bar if the forming bar is young
+    const vi = n >= 2 ? n - 2 : n - 1;
+    const relVol = volAvgArr[vi] ? Math.max(vols[n - 1], vols[vi]) / volAvgArr[vi] : 1;
+    return {
+      ema9Arr, ema21Arr, sma50Arr, sma200Arr, rsiArr, macd: m, bb, atrArr, adx: ad, vwapArr, volAvgArr,
+      price: closes[n - 1],
+      ema9: last(ema9Arr), ema21: last(ema21Arr), sma50: last(sma50Arr), sma200: last(sma200Arr),
+      rsi: last(rsiArr), rsiPrev: rsiArr[n - 2],
+      macdLine: last(m.line), macdSignal: last(m.signal), macdHist: last(m.hist), macdHistPrev: m.hist[n - 2],
+      bbUpper: last(bb.upper), bbLower: last(bb.lower), bbMid: last(bb.mid),
+      atr: last(atrArr), adx: last(ad.adx), pdi: last(ad.pdi), mdi: last(ad.mdi),
+      vwap: last(vwapArr), relVol, volAvg: volAvgArr[vi],
+      ema21Slope: ema21Arr[n - 1] != null && ema21Arr[n - 6] != null ? (ema21Arr[n - 1] - ema21Arr[n - 6]) : null,
+    };
+  }
+
+  function scoreSignals(ind, pats, structure) {
+    const parts = [];
+    const add = (pts, label, group) => parts.push({ pts, label, group });
+    const p = ind.price;
+    if (ind.ema21 != null) add(p > ind.ema21 ? 10 : -10, p > ind.ema21 ? 'السعر فوق EMA21' : 'السعر تحت EMA21', 'trend');
+    if (ind.ema9 != null && ind.ema21 != null) add(ind.ema9 > ind.ema21 ? 8 : -8, ind.ema9 > ind.ema21 ? 'EMA9 فوق EMA21' : 'EMA9 تحت EMA21', 'trend');
+    if (ind.ema21Slope != null) add(ind.ema21Slope > 0 ? 5 : -5, ind.ema21Slope > 0 ? 'ميل EMA21 صاعد' : 'ميل EMA21 هابط', 'trend');
+    if (ind.sma50 != null) add(p > ind.sma50 ? 8 : -8, p > ind.sma50 ? 'السعر فوق SMA50' : 'السعر تحت SMA50', 'trend');
+    if (ind.vwap != null) add(p > ind.vwap ? 8 : -8, p > ind.vwap ? 'السعر فوق VWAP' : 'السعر تحت VWAP', 'trend');
+    if (structure === 'up') add(8, 'هيكل صاعد HH/HL', 'trend');
+    if (structure === 'down') add(-8, 'هيكل هابط LH/LL', 'trend');
+    if (ind.rsi != null) {
+      if (ind.rsi >= 50 && ind.rsi < 70) add(8, `RSI إيجابي (${ind.rsi.toFixed(0)})`, 'momentum');
+      else if (ind.rsi >= 70) add(-4, `RSI متضخم (${ind.rsi.toFixed(0)}) خطر مطاردة`, 'momentum');
+      else if (ind.rsi < 30) add(2, `RSI تشبع بيع (${ind.rsi.toFixed(0)}) ارتداد ممكن`, 'momentum');
+      else add(-6, `RSI ضعيف (${ind.rsi.toFixed(0)})`, 'momentum');
+    }
+    if (ind.macdHist != null) {
+      const rising = ind.macdHistPrev != null && ind.macdHist > ind.macdHistPrev;
+      if (ind.macdHist > 0) add(rising ? 10 : 5, rising ? 'MACD موجب ومتصاعد' : 'MACD موجب', 'momentum');
+      else add(rising ? -3 : -10, rising ? 'MACD سالب لكنه يتحسن' : 'MACD سالب ومتراجع', 'momentum');
+    }
+    let s = parts.reduce((a, b) => a + b.pts, 0);
+    // ADX amplifies trend conviction
+    if (ind.adx != null && ind.adx > 25) { const amp = Math.round(s * 0.15); if (amp) add(amp, `ADX قوي (${ind.adx.toFixed(0)}) يعزز الاتجاه`, 'trend'); }
+    if (ind.relVol >= 1.5) add(s >= 0 ? 6 : -6, `حجم مرتفع ×${ind.relVol.toFixed(1)} يؤكد الحركة`, 'volume');
+    for (const pt of pats) if (pt.bias) add(pt.bias * pt.strength * 4, pt.name, 'pattern');
+    s = parts.reduce((a, b) => a + b.pts, 0);
+    s = Math.max(-100, Math.min(100, s));
+    let label = 'محايد';
+    if (s >= 40) label = 'إيجابي قوي'; else if (s >= 15) label = 'إيجابي'; else if (s <= -40) label = 'سلبي قوي'; else if (s <= -15) label = 'سلبي';
+    return { score: s, label, parts };
+  }
+
+  const TF_META = {
+    '1min': { hold: 'دقائق إلى ساعة، صفقة يومية', timeStopBars: 20, unit: 'دقيقة', unitMin: 1, intraday: true },
+    '5min': { hold: 'من ساعة إلى نهاية الجلسة، صفقة يومية', timeStopBars: 12, unit: 'دقائق', unitMin: 5, intraday: true },
+    '15min': { hold: 'من عدة ساعات إلى يومين', timeStopBars: 16, unit: 'دقيقة', unitMin: 15, intraday: true },
+    '1h': { hold: 'من يومين إلى 5 أيام تداول (سوينغ قصير)', timeStopBars: 21, unit: 'ساعة', unitMin: 60, intraday: false },
+    '1day': { hold: 'من أسبوع إلى 4 أسابيع (سوينغ)', timeStopBars: 10, unit: 'يوم', unitMin: 390, intraday: false },
+  };
+
+  function fmtDuration(tf, bars) {
+    const m = TF_META[tf];
+    const mins = m.unitMin * bars;
+    if (tf === '1day') return `${bars} أيام تداول`;
+    if (mins < 60) return `${mins} دقيقة`;
+    const h = mins / 60;
+    if (tf === '1h') return `${Math.round(h / 6.5 * 10) / 10} يوم تداول تقريباً (${bars} شمعة ساعة)`;
+    return `${Math.round(h * 10) / 10} ساعة`;
+  }
+
+  /* settings: {account, riskPct, maxPosPct}
+     ctx: {tf, earningsDays (number|null), marketPhase ('open'|'closed'|'pre'|'post'), minutesSinceOpen, minutesToClose, avgDailyVol (number|null), higherBias ('bullish'|'bearish'|'neutral'|null)} */
+  function tradePlan(bars, ind, lv, sig, pats, settings, ctx) {
+    const px = ind.price, A = ind.atr || px * 0.01;
+    const meta = TF_META[ctx.tf] || TF_META['5min'];
+    const guards = [];
+    let hard = false;
+    if (px < 5) { guards.push({ level: 'hard', text: 'سعر السهم أقل من 5$ (سهم صغير/مضاربي خطر على المبتدئ).' }); hard = true; }
+    if (ctx.avgDailyVol != null && ctx.avgDailyVol < 500000) { guards.push({ level: 'hard', text: `متوسط حجم التداول اليومي ضعيف (${Math.round(ctx.avgDailyVol).toLocaleString('en-US')} سهم): سيولة منخفضة.` }); hard = true; }
+    if (ctx.earningsDays != null && ctx.earningsDays >= 0 && ctx.earningsDays <= 3) { guards.push({ level: 'hard', text: `إعلان أرباح بعد ${ctx.earningsDays === 0 ? 'اليوم' : ctx.earningsDays + ' يوم'}: تذبذب حاد غير متوقع.` }); hard = true; }
+    if (ctx.marketPhase !== 'open') guards.push({ level: 'soft', text: 'السوق مغلق الآن: الخطة للجلسة القادمة، وأعد التحليل بعد الافتتاح.' });
+    if (meta.intraday && ctx.marketPhase === 'open' && ctx.minutesSinceOpen != null && ctx.minutesSinceOpen < 15) guards.push({ level: 'soft', text: 'أول 15 دقيقة بعد الافتتاح: تذبذب عالٍ، الأفضل الانتظار.' });
+    if (meta.intraday && ctx.marketPhase === 'open' && ctx.minutesToClose != null && ctx.minutesToClose < 15) guards.push({ level: 'soft', text: 'آخر 15 دقيقة قبل الإغلاق: لا تفتح صفقة يومية جديدة.' });
+    if (ind.rsi != null && ind.rsi > 75) guards.push({ level: 'soft', text: `RSI مرتفع جداً (${ind.rsi.toFixed(0)}): لا تطارد السعر، انتظر تصحيح.` });
+    if (ctx.higherBias === 'bearish') guards.push({ level: 'soft', text: 'الاتجاه على الإطار اليومي هابط: الصفقة تعاكس الاتجاه الأكبر.' });
+
+    const sup = lv.supports[0], res = lv.resistances[0];
+    const breakout = pats.find((p) => p.id === 'breakout');
+    const flag = pats.find((p) => p.id === 'bull_flag' || p.id === 'asc_tri');
+    let entryType = 'limit', zoneLow, zoneHigh, trigger, anchor, setup;
+
+    if (breakout) {
+      anchor = breakout.level;
+      zoneLow = anchor; zoneHigh = Math.min(px, anchor + 0.35 * A);
+      if (zoneHigh <= zoneLow) zoneHigh = zoneLow + 0.25 * A;
+      trigger = `بعد الاختراق: ادخل عند إعادة اختبار ${anchor.toFixed(2)} وثبات السعر فوقه، أو عند استمرار الإغلاق فوق ${zoneHigh.toFixed(2)}.`;
+      setup = 'اختراق مقاومة وإعادة اختبار'; entryType = 'breakout';
+    } else if (flag) {
+      anchor = flag.level; entryType = 'breakout';
+      zoneLow = anchor; zoneHigh = anchor + 0.25 * A;
+      trigger = `ادخل عند إغلاق شمعة فوق ${anchor.toFixed(2)} بحجم أعلى من المتوسط.`;
+      setup = flag.id === 'bull_flag' ? 'اختراق علم صاعد' : 'اختراق مثلث صاعد';
+    } else {
+      // pullback to the closest dynamic/static support below price
+      const cands = [sup && sup.price, ind.ema21, ind.vwap].filter((v) => v != null && v < px && px - v <= 3 * A);
+      anchor = cands.length ? Math.max(...cands) : (sup ? sup.price : px - A);
+      if (px - anchor <= 0.6 * A) { zoneLow = anchor; zoneHigh = px; }
+      else { zoneLow = anchor; zoneHigh = anchor + 0.3 * A; }
+      trigger = px - anchor <= 0.6 * A
+        ? `السعر قريب من الدعم ${anchor.toFixed(2)}: ادخل بشمعة ارتداد صاعدة تُغلق فوق ${(anchor + 0.2 * A).toFixed(2)}.`
+        : `لا تطارد. ضع أمر شراء محدد (Limit) في منطقة ${zoneLow.toFixed(2)} – ${zoneHigh.toFixed(2)} وانتظر شمعة ارتداد.`;
+      setup = 'ارتداد من دعم (Pullback)';
+    }
+    const entry = (zoneLow + zoneHigh) / 2;
+    // Structural stop: below the level the setup is built on (breakout level or support)
+    const nearSup = lv.supports.find((l) => l.price < zoneLow && zoneLow - l.price <= 0.6 * A);
+    const structLow = nearSup ? nearSup.price : zoneLow;
+    let stop = structLow - (entryType === 'breakout' ? 0.8 : 0.5) * A;
+    if (entry - stop < 0.8 * A) stop = entry - 1.0 * A;
+    const R = entry - stop;
+    const tooWide = R > 3 * A;
+    const resAbove = lv.resistances.filter((l) => l.price > entry + 0.3 * A).map((l) => l.price);
+    let t1 = resAbove.find((p) => p >= entry + 1.0 * R) ?? entry + 1.5 * R;
+    if (t1 < entry + 1.0 * R) t1 = entry + 1.5 * R;
+    let t2 = resAbove.find((p) => p >= t1 + 0.5 * R) ?? entry + 3 * R;
+    if (t2 < entry + 2 * R && !resAbove.find((p) => p > t2)) t2 = Math.max(t2, entry + 2.5 * R);
+    const rr1 = (t1 - entry) / R, rr2 = (t2 - entry) / R;
+    // A real resistance sitting between entry and 2R caps the trade
+    const capped = res && res.price > entry && res.price < entry + 2 * R;
+    const extended = px > zoneHigh + 1.5 * A;
+
+    const riskDollars = settings.account * settings.riskPct / 100;
+    let shares = Math.floor(riskDollars / R);
+    const maxShares = Math.floor((settings.account * settings.maxPosPct / 100) / entry);
+    const cappedBySize = shares > maxShares;
+    shares = Math.max(0, Math.min(shares, maxShares));
+
+    let decision = 'WAIT', why = [];
+    if (hard) { decision = 'AVOID'; why.push('شرط حماية إلزامي غير متحقق.'); }
+    else if (sig.score <= -15) { decision = 'AVOID'; why.push(`المؤشرات سلبية (${sig.score}). الشراء ضد الاتجاه.`); }
+    else if (sig.score < 25) { decision = 'WAIT'; why.push(`الإشارة غير كافية (${sig.score}/100). المطلوب 25 فأعلى.`); }
+    else if (tooWide) { decision = 'WAIT'; why.push('المسافة لوقف الخسارة واسعة جداً (أكثر من 3×ATR).'); }
+    else if (rr2 < 2) { decision = 'WAIT'; why.push(`العائد/المخاطرة للهدف الثاني ${rr2.toFixed(1)} أقل من 2.`); }
+    else if (extended) { decision = 'WAIT'; why.push('السعر ممتد بعيداً عن منطقة الدخول. انتظر التصحيح.'); }
+    else if (ind.rsi != null && ind.rsi > 80) { decision = 'WAIT'; why.push(`RSI عند ${ind.rsi.toFixed(0)}: تضخم شديد، الدخول الآن مطاردة للسعر.`); }
+    else { decision = 'BUY'; why.push(`إشارة ${sig.label} (${sig.score}) مع عائد/مخاطرة ${rr2.toFixed(1)}R.`); }
+    if (decision === 'BUY' && capped) why.push(`انتبه: مقاومة قريبة عند ${res.price.toFixed(2)} قد تبطئ الحركة.`);
+    if (decision === 'BUY' && guards.some((g) => g.level === 'soft')) why.push('راجع التحذيرات قبل التنفيذ.');
+
+    const timeStopBars = meta.timeStopBars;
+    const timing = {
+      when: decision === 'BUY' ? trigger : decision === 'WAIT' ? `انتظر: ${trigger}` : 'لا دخول حالياً.',
+      hold: meta.hold,
+      timeStop: `إذا لم يصل السعر للهدف الأول خلال ${fmtDuration(ctx.tf, timeStopBars)}، اخرج أو قلّص الصفقة.`,
+      exit: meta.intraday && ctx.tf !== '15min'
+        ? 'صفقة يومية: أغلق كل المراكز قبل نهاية الجلسة بـ 15 دقيقة. عند الهدف الأول بِع نصف الكمية وارفع الوقف لسعر الدخول.'
+        : 'عند الهدف الأول بِع نصف الكمية وارفع وقف الخسارة إلى سعر الدخول. لا تحتفظ بالصفقة خلال إعلان الأرباح.',
+    };
+
+    const confluence = sig.parts.filter((p) => p.pts > 0).length;
+    const strength = decision === 'BUY' ? (sig.score >= 45 && rr2 >= 2.5 && confluence >= 6 ? 'high' : 'medium') : 'low';
+
+    return {
+      decision, why, setup, entryType, strength,
+      zoneLow: round2(zoneLow), zoneHigh: round2(zoneHigh), entry: round2(entry),
+      stop: round2(stop), t1: round2(t1), t2: round2(t2),
+      rr1: Math.round(rr1 * 10) / 10, rr2: Math.round(rr2 * 10) / 10,
+      R: round2(R), shares, riskDollars: round2(shares * R), positionValue: round2(shares * entry), cappedBySize,
+      invalidation: round2(stop),
+      trigger, timing, guards,
+    };
+  }
+
+  function analyze(bars, settings, ctx) {
+    if (!bars || bars.length < 30) return { error: 'بيانات غير كافية للتحليل (أقل من 30 شمعة).' };
+    const ind = computeIndicators(bars, { sessionKey: ctx.sessionKey });
+    const sw = swings(bars, ctx.tf === '1day' ? 3 : 3, 3);
+    const lv = levels(bars, sw, ind.atr || ind.price * 0.01);
+    const trendUp = ind.ema21Slope > 0, trendDown = ind.ema21Slope < 0;
+    const cp = chartPatterns(bars, sw, ind.atr || ind.price * 0.01, ind);
+    const candles = candlePatterns(bars, trendDown, trendUp);
+    const pats = [...cp.patterns, ...candles];
+    const sig = scoreSignals(ind, pats, cp.structure);
+    const plan = tradePlan(bars, ind, lv, sig, pats, settings, ctx);
+    return { ind, swings: sw, levels: lv, patterns: pats, structure: cp.structure, signal: sig, plan };
+  }
+
+  // Higher-timeframe (daily) bias summary
+  function dailyBias(bars) {
+    if (!bars || bars.length < 30) return null;
+    const ind = computeIndicators(bars, {});
+    let pts = 0;
+    if (ind.sma50 != null) pts += ind.price > ind.sma50 ? 1 : -1;
+    if (ind.sma200 != null) pts += ind.price > ind.sma200 ? 1 : -1;
+    if (ind.ema21 != null) pts += ind.price > ind.ema21 ? 1 : -1;
+    if (ind.macdHist != null) pts += ind.macdHist > 0 ? 1 : -1;
+    const bias = pts >= 2 ? 'bullish' : pts <= -2 ? 'bearish' : 'neutral';
+    const look = bars.slice(-252);
+    return {
+      bias, price: ind.price, sma50: ind.sma50, sma200: ind.sma200, ema21: ind.ema21, rsi: ind.rsi, atr: ind.atr,
+      hi52: Math.max(...look.map((b) => b.high)), lo52: Math.min(...look.map((b) => b.low)),
+      avgVol: ind.volAvg,
+      chg5: bars.length > 5 ? (ind.price / bars[bars.length - 6].close - 1) * 100 : null,
+      chg20: bars.length > 20 ? (ind.price / bars[bars.length - 21].close - 1) * 100 : null,
+    };
+  }
+
+  // Lightweight headline sentiment (Arabic UI tag only; the AI does the real reading)
+  const POS = ['beat', 'beats', 'surge', 'surges', 'soar', 'record', 'upgrade', 'upgraded', 'raises', 'raised', 'strong', 'growth', 'jump', 'jumps', 'rally', 'outperform', 'buy rating', 'approval', 'approved', 'partnership', 'wins', 'profit', 'bullish', 'tops', 'higher'];
+  const NEG = ['miss', 'misses', 'plunge', 'plunges', 'fall', 'falls', 'drop', 'drops', 'downgrade', 'downgraded', 'cuts', 'cut', 'weak', 'lawsuit', 'probe', 'investigation', 'recall', 'loss', 'losses', 'decline', 'slump', 'bearish', 'sell rating', 'layoffs', 'warning', 'lower', 'fraud', 'delay'];
+  function headlineTone(text) {
+    const t = ' ' + String(text || '').toLowerCase() + ' ';
+    let s = 0;
+    for (const w of POS) if (t.includes(' ' + w + ' ') || t.includes(' ' + w + ',')) s++;
+    for (const w of NEG) if (t.includes(' ' + w + ' ') || t.includes(' ' + w + ',')) s--;
+    return s > 0 ? 'positive' : s < 0 ? 'negative' : 'neutral';
+  }
+
+  const api = { sma, ema, rsi, macd, bollinger, atr, adx, vwap, swings, levels, computeIndicators, chartPatterns, candlePatterns, scoreSignals, tradePlan, analyze, dailyBias, headlineTone, TF_META, round2 };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.MirsadEngine = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>/* Mirsad — professional analyst prompt.
+   Built on: TradingAgents (role-specialised analysts, bull/bear debate, risk-manager veto),
+   R-multiple trade planning with ATR-based structural stops, explicit falsification price,
+   multi-timeframe confirmation, and hard beginner-protection rules the model may not override. */
+(function (root) {
+  const SYSTEM_PROMPT = `You are the investment committee of a disciplined US-equities proprietary trading desk, reasoning as ONE structured process with seven seats. You are advising a BEGINNER who is paper-trading or trading small size. Your job is not to predict the future; it is to decide whether a trade with a positive, well-defined risk/reward exists RIGHT NOW, and if so, to specify it exactly.
+
+## SEATS (work through them in order, internally)
+1. TECHNICAL ANALYST — Read trend (EMA9/EMA21/SMA50/SMA200 alignment, ADX), momentum (RSI14, MACD 12-26-9), volatility (ATR14, Bollinger 20,2), volume (relative volume, VWAP position). Always check the HIGHER timeframe first (daily context provided), then the trading timeframe. A setup that fights the higher-timeframe trend is downgraded one level.
+2. CHART-PATTERN ANALYST — Evaluate the detected patterns, swing structure (HH/HL vs LH/LL) and support/resistance levels. Treat detected patterns as CANDIDATES: confirm or reject each one from the raw bars. Prefer confirmed breakouts/retests over anticipation.
+3. NEWS & SENTIMENT ANALYST — Read every headline with its timestamp. Classify impact (positive/negative/neutral) and materiality. Distinguish fresh catalysts (<24h) from stale news already priced in. Note analyst consensus and upcoming earnings. Never invent news that is not in the data.
+4. BULL RESEARCHER — Build the strongest evidence-based case FOR a long entry.
+5. BEAR RESEARCHER — Build the strongest evidence-based case AGAINST it. Name what would make the bull wrong.
+6. RISK MANAGER (has veto) — Enforce the HARD RULES below. Size the position from the user's risk settings. If the trade fails any hard rule, the decision cannot be BUY.
+7. HEAD TRADER — Weigh the debate and issue the final, specific decision.
+
+## HARD RULES (non-negotiable; the Risk Manager vetoes any violation)
+- LONG-ONLY. Never recommend short selling, options, margin or leverage to this user. Bearish conclusions map to WAIT or AVOID.
+- Every BUY must have: an entry zone, a STRUCTURAL stop-loss (below a real support/swing low, typically 1–2× ATR from entry, never a round arbitrary number), at least two targets anchored to real resistance or R-multiples, and an explicit invalidation price.
+- Reward:risk to Target 2 must be ≥ 2.0 (measured from the middle of the entry zone). Otherwise the decision is WAIT.
+- Never chase: if price is more than ~1.5 ATR above the planned entry zone, the decision is WAIT (wait for pullback) with the zone stated.
+- Earnings within 3 trading days → AVOID for a speculative trade (state the date).
+- Price under $5, or average daily volume clearly under 500k shares → AVOID (illiquid/penny risk).
+- During the first 15 minutes after the US open, or the last 15 minutes before the close, a beginner should not open new intraday trades → say so in timing.
+- Position size = (account × risk% per trade) ÷ (entry − stop), capped at the max position % of account. Report shares and dollar risk.
+- If data are missing, stale, contradictory, or the market is closed, say exactly what is missing and lower conviction; with insufficient data the answer is WAIT.
+- Use ONLY the numbers in the data package. Do not invent prices, levels, news, or fundamentals. If you compute something, it must be derivable from the data.
+- The rules-based engine's plan is provided. You may refine it, but if you disagree with its decision or any of its levels you must say which and why (field disagreement_with_engine).
+- Speak in probabilities and conditions, never certainties. No hype. No guarantees.
+
+## TIMING ("WHEN")
+State when to act in concrete, checkable terms: the trigger condition (e.g., "5-minute candle closes above 187.40 with above-average volume"), the session window (US market hours are 09:30–16:00 New York time; give Riyadh time as well, using the times in the data), expected holding period for this timeframe, a time-stop (exit if Target 1 is not reached within N bars/hours/days), and whether to be flat before the close or before earnings.
+
+## LANGUAGE
+All human-readable text values must be in clear Modern Standard Arabic suitable for a beginner, with technical terms followed by the English term in parentheses the first time (e.g., "وقف الخسارة (Stop-loss)"). Numbers use Western digits with 2 decimals for prices.
+
+{{OUTPUT_FORMAT}}`;
+
+  const OUTPUT_JSON = `## OUTPUT FORMAT
+Reply with ONLY one JSON object, no markdown fence, no text before or after, exactly this shape:
+{
+  "decision": "BUY" | "WAIT" | "AVOID",
+  "conviction": "low" | "medium" | "high",
+  "setup": "short Arabic name of the setup, e.g. ارتداد من دعم مع تأكيد حجم",
+  "higher_timeframe_bias": "bullish" | "bearish" | "neutral",
+  "trading_timeframe_bias": "bullish" | "bearish" | "neutral",
+  "entry": { "type": "limit" | "breakout" | "none", "zone_low": number|null, "zone_high": number|null, "trigger": "Arabic, the exact condition to enter" },
+  "stop_loss": number|null,
+  "stop_reason": "Arabic",
+  "targets": [ { "price": number, "reason": "Arabic" }, { "price": number, "reason": "Arabic" } ],
+  "risk_reward_t2": number|null,
+  "position": { "shares": number|null, "dollar_risk": number|null, "note": "Arabic" },
+  "timing": { "when_to_enter": "Arabic", "holding_period": "Arabic", "time_stop": "Arabic", "exit_rules": "Arabic" },
+  "invalidation": "Arabic: the price/condition that proves this idea wrong",
+  "technical_summary": "Arabic, 2-4 sentences",
+  "pattern_summary": "Arabic, 1-3 sentences, confirm or reject each detected pattern",
+  "news_sentiment": "positive" | "negative" | "neutral" | "mixed" | "none",
+  "news": [ { "headline": "Arabic translation/summary of the headline", "impact": "positive" | "negative" | "neutral", "why": "Arabic, one sentence" } ],
+  "bull_case": [ "Arabic bullet", "..." ],
+  "bear_case": [ "Arabic bullet", "..." ],
+  "risks": [ "Arabic bullet", "..." ],
+  "disagreement_with_engine": "Arabic, or empty string if you agree",
+  "beginner_explanation": "Arabic, 3-5 plain sentences explaining the decision to a beginner",
+  "checklist": [ "Arabic: concrete things to verify before clicking buy", "..." ]
+}
+Use null for numeric fields when decision is not BUY and no level makes sense; when the decision is WAIT, still give the zone and trigger you would wait for. Keep "news" to the 6 most material items.`;
+
+  const OUTPUT_REPORT = `## OUTPUT FORMAT
+Write a clear Arabic report with these headed sections, in this order:
+1) القرار (شراء / انتظار / تجنّب) ودرجة القناعة ونوع الإعداد
+2) خطة الصفقة: منطقة الدخول وشرطه، وقف الخسارة وسببه، الهدف الأول والثاني، نسبة العائد للمخاطرة، عدد الأسهم والمبلغ المعرّض للخطر
+3) التوقيت: متى أدخل، مدة الاحتفاظ المتوقعة، الوقف الزمني، قواعد الخروج
+4) السعر الذي يُثبت خطأ الفكرة (Invalidation)
+5) التحليل الفني (الإطار الأعلى ثم إطار التداول)
+6) الأنماط البيانية (تأكيد أو رفض كل نمط مكتشف)
+7) الأخبار وأثرها
+8) حجة المتفائل مقابل حجة المتشائم
+9) المخاطر
+10) أين أختلف مع خطة المحرك الآلي (إن وُجد)
+11) شرح مبسّط للمبتدئ
+12) قائمة تحقق قبل الضغط على شراء`;
+
+  function buildSystem(mode) {
+    return SYSTEM_PROMPT.replace('{{OUTPUT_FORMAT}}', mode === 'report' ? OUTPUT_REPORT : OUTPUT_JSON);
+  }
+
+  const api = { SYSTEM_PROMPT, OUTPUT_JSON, OUTPUT_REPORT, buildSystem };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.MirsadPrompt = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>(() => {
+  'use strict';
+  const E = window.MirsadEngine, P = window.MirsadPrompt;
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmt = (n, d = 2) => (n == null || !isFinite(n) ? '—' : Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }));
+  const money = (n, d = 2) => (n == null || !isFinite(n) ? '—' : (n < 0 ? '−$' : '$') + fmt(Math.abs(n), d));
+  const pct = (n, d = 2) => (n == null || !isFinite(n) ? '—' : (n > 0 ? '+' : n < 0 ? '−' : '') + fmt(Math.abs(n), d) + '%');
+  const vol = (n) => (n == null || !isFinite(n) ? '—' : n >= 1e9 ? fmt(n / 1e9, 2) + 'B' : n >= 1e6 ? fmt(n / 1e6, 2) + 'M' : n >= 1e3 ? fmt(n / 1e3, 1) + 'K' : fmt(n, 0));
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('mirsad.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('mirsad.' + k, JSON.stringify(v)); } catch { /* storage unavailable */ } },
+  };
+
+  const DEFAULTS = { finnhubKey: '', twelveKey: '', anthropicKey: '', model: 'claude-sonnet-5-5', account: 10000, riskPct: 1, maxPosPct: 25, sound: true, demo: null, theme: 'auto',
+    overlays: { ema: true, vwap: true, bb: false, levels: true, plan: true, marks: true } };
+  const settings = { ...DEFAULTS, ...store.get('settings', {}) };
+  settings.overlays = { ...DEFAULTS.overlays, ...(settings.overlays || {}) };
+  if (settings.demo == null) settings.demo = !(settings.finnhubKey || settings.twelveKey);
+  // Inside a Claude artifact the sandbox blocks outside connections, so only the simulated mode can run there.
+  const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
+  if (IN_CLAUDE) settings.demo = true;
+  // Personal build: keys baked into this copy of the file are applied on first open.
+  const PRESET = window.MIRSAD_PRESET || null;
+  if (PRESET && !IN_CLAUDE) {
+    let changed = false;
+    for (const k of ['finnhubKey', 'twelveKey']) if (PRESET[k] && !settings[k]) { settings[k] = PRESET[k]; changed = true; }
+    if (changed) { settings.demo = false; store.set('settings', settings); }
+  }
+  const saveSettings = () => store.set('settings', settings);
+
+  const TF_SEC = { '1min': 60, '5min': 300, '15min': 900, '1h': 3600, '1day': 86400 };
+  const TF_AR = { '1min': 'دقيقة', '5min': '5 دقائق', '15min': '15 دقيقة', '1h': 'ساعة', '1day': 'يومي' };
+  const DEC_AR = { BUY: 'شراء', WAIT: 'انتظار', AVOID: 'تجنّب', NONE: '—' };
+
+  const state = {
+    symbol: store.get('symbol', 'AAPL'), tf: store.get('tf', '5min'),
+    watchlist: store.get('watchlist', ['AAPL', 'NVDA', 'TSLA', 'AMD', 'MSFT', 'AMZN', 'META', 'SPY']),
+    bars: [], daily: [], analysis: null, dailyInfo: null,
+    quote: null, profile: null, news: [], earnings: [], recs: null, metric: null, marketStatus: null,
+    prices: {}, prevClose: {}, lastTrade: null, lastTradeAt: 0, errors: [], ai: null, aiBusy: null,
+  };
+
+  /* ---------------- Time & market clock ---------------- */
+  const nyFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, weekday: 'short' });
+  function nyParts(d) {
+    const o = {}; for (const p of nyFmt.formatToParts(d)) o[p.type] = p.value;
+    let h = +o.hour; if (h === 24) h = 0;
+    return { y: +o.year, m: +o.month, d: +o.day, h, min: +o.minute, s: +o.second, wd: o.weekday };
+  }
+  function nyOffsetMin(d) { const p = nyParts(d); return Math.round((Date.UTC(p.y, p.m - 1, p.d, p.h, p.min, p.s) - Math.floor(d.getTime() / 1000) * 1000) / 60000); }
+  const offCache = new Map();
+  function offsetFor(sec) { const k = Math.floor(sec / 3600); let v = offCache.get(k); if (v == null) { v = nyOffsetMin(new Date(k * 3600 * 1000)); offCache.set(k, v); } return v; }
+  function nyDayKey(sec) { const s = sec + offsetFor(sec) * 60; return Math.floor(s / 86400); }
+  function nyMinuteOfDay(sec) { const s = sec + offsetFor(sec) * 60; return Math.floor((((s % 86400) + 86400) % 86400) / 60); }
+  function nyWeekday(sec) { const s = sec + offsetFor(sec) * 60; return new Date(s * 1000).getUTCDay(); }
+  const localTime = (ms) => new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const localDateTime = (ms) => new Date(ms).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+  function nyLocalMs(y, m, d, h, mi) { const approx = Date.UTC(y, m - 1, d, h, mi); return approx - nyOffsetMin(new Date(approx)) * 60000; }
+
+  function market(now = new Date()) {
+    if (settings.demo) return { phase: 'open', simulated: true, minutesSinceOpen: 120, minutesToClose: 200 };
+    const p = nyParts(now);
+    const mins = p.h * 60 + p.min;
+    const weekend = p.wd === 'Sat' || p.wd === 'Sun';
+    let phase = 'closed';
+    if (!weekend) { if (mins >= 570 && mins < 960) phase = 'open'; else if (mins >= 240 && mins < 570) phase = 'pre'; else if (mins >= 960 && mins < 1200) phase = 'post'; }
+    const ms = state.marketStatus;
+    if (ms && ms.holiday && !ms.isOpen && Date.now() - ms._at < 6 * 3600e3) phase = 'closed';
+    const openMs = nyLocalMs(p.y, p.m, p.d, 9, 30), closeMs = nyLocalMs(p.y, p.m, p.d, 16, 0);
+    // next open
+    let next = null;
+    for (let k = 0; k < 8 && !next; k++) {
+      const t = new Date(Date.UTC(p.y, p.m - 1, p.d + k, 12));
+      const wd = t.getUTCDay();
+      if (wd === 0 || wd === 6) continue;
+      const cand = nyLocalMs(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate(), 9, 30);
+      if (cand > now.getTime()) next = cand;
+    }
+    return { phase, minutesSinceOpen: mins - 570, minutesToClose: 960 - mins, openMs, closeMs, nextOpen: next, ny: p };
+  }
+  function isRegularSession(sec) { const wd = nyWeekday(sec); if (wd === 0 || wd === 6) return false; const m = nyMinuteOfDay(sec); return m >= 570 && m < 960; }
+
+  /* ---------------- Data sources ---------------- */
+  async function fh(path, params = {}) {
+    const u = new URL('https://finnhub.io/api/v1/' + path);
+    for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
+    u.searchParams.set('token', settings.finnhubKey);
+    const r = await fetch(u);
+    if (r.status === 401) throw new Error('مفتاح Finnhub غير صحيح.');
+    if (r.status === 403) throw new Error(`Finnhub: البيانات (${path}) غير متاحة في الخطة المجانية.`);
+    if (r.status === 429) throw new Error('تجاوزت حد Finnhub (60 طلب في الدقيقة). انتظر دقيقة ثم أعد المحاولة.');
+    if (!r.ok) throw new Error('Finnhub: خطأ ' + r.status);
+    return r.json();
+  }
+  async function td(path, params = {}) {
+    const u = new URL('https://api.twelvedata.com/' + path);
+    for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
+    u.searchParams.set('apikey', settings.twelveKey);
+    const r = await fetch(u);
+    const j = await r.json().catch(() => ({}));
+    if (j.status === 'error' || !r.ok) {
+      const code = j.code || r.status;
+      if (code === 401) throw new Error('مفتاح Twelve Data غير صحيح.');
+      if (code === 429) throw new Error('تجاوزت حد Twelve Data المجاني (8 طلبات في الدقيقة أو 800 يومياً). انتظر دقيقة.');
+      if (code === 404 || code === 400) throw new Error('الرمز غير موجود في Twelve Data أو غير مدعوم في الخطة المجانية.');
+      throw new Error('Twelve Data: ' + (j.message || code));
+    }
+    return j;
+  }
+  function parseTD(values, tf) {
+    return (values || []).map((v) => ({
+      time: tf === '1day' ? Date.parse(v.datetime.slice(0, 10) + 'T00:00:00Z') / 1000 : Date.parse(v.datetime.replace(' ', 'T') + 'Z') / 1000,
+      open: +v.open, high: +v.high, low: +v.low, close: +v.close, volume: +v.volume || 0,
+    })).filter((b) => isFinite(b.close) && isFinite(b.time)).sort((a, b) => a.time - b.time)
+      .filter((b, i, a) => i === 0 || b.time !== a[i - 1].time);
+  }
+  const ymd = (d) => d.toISOString().slice(0, 10);
+
+  /* ---------------- Demo (simulated) data ---------------- */
+  const Demo = {
+    seed(sym) { let h = 2166136261; for (const c of sym) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; },
+    rng(seed) { let s = seed || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; },
+    base(sym) { return 40 + (this.seed(sym) % 2200) / 10; },
+    history(sym, tf, n = 400) {
+      const r = this.rng(this.seed(sym + tf));
+      const iv = TF_SEC[tf];
+      const now = Math.floor(Date.now() / 1000);
+      const endT = tf === '1day' ? Math.floor(now / 86400) * 86400 : Math.floor(now / iv) * iv;
+      let p = this.base(sym) * (0.85 + r() * 0.3);
+      const sig = tf === '1day' ? 0.016 : tf === '1h' ? 0.0045 : tf === '15min' ? 0.0025 : tf === '5min' ? 0.0015 : 0.0008;
+      const bars = []; let drift = 0;
+      for (let i = n - 1; i >= 0; i--) {
+        if ((n - i) % 60 === 0) drift = (r() - 0.45) * sig * 0.6;
+        const o = p; const ch = o * ((r() - 0.5) * 2 * sig + drift);
+        const c = Math.max(1, o + ch);
+        const h = Math.max(o, c) + o * r() * sig * 0.7, l = Math.min(o, c) - o * r() * sig * 0.7;
+        const baseVol = tf === '1day' ? 2.5e7 : 2.5e7 / (23400 / iv);
+        const v = Math.round(baseVol * (0.5 + r()) * (r() > 0.93 ? 2.5 : 1));
+        bars.push({ time: endT - i * iv, open: o, high: h, low: Math.max(0.5, l), close: c, volume: v });
+        p = c;
+      }
+      return bars;
+    },
+    news(sym) {
+      const now = Date.now() / 1000;
+      const items = [
+        [`${sym} shares climb after analyst raises price target`, 'positive', 1.2],
+        [`${sym} faces regulatory probe over product disclosures`, 'negative', 5],
+        [`Sector peers rally as investors rotate into growth names`, 'positive', 9],
+        [`${sym} to present at industry conference next week`, 'neutral', 20],
+        [`Options traders bet on volatility ahead of ${sym} earnings`, 'neutral', 30],
+      ];
+      return items.map(([h, , hrs], i) => ({ id: 'demo' + i, headline: h + ' (demo)', summary: 'Simulated headline for interface practice only. Not real news.', source: 'Demo Wire', datetime: Math.floor(now - hrs * 3600), url: '', demo: true }));
+    },
+    anchor(bars, target) {
+      const k = target / bars[bars.length - 1].close;
+      for (const b of bars) { b.open *= k; b.high *= k; b.low *= k; b.close *= k; }
+      return bars;
+    },
+    timer: null,
+    start() {
+      this.stop();
+      this.timer = setInterval(() => {
+        const syms = Live.desired();
+        const trades = [];
+        const nowMs = Date.now();
+        for (const s of syms) {
+          let px = state.prices[s];
+          if (px == null) { const h = this.history(s, '1day', 5); px = h[h.length - 1].close; state.prevClose[s] = h[h.length - 2].close; }
+          const step = px * (Math.random() - 0.5) * 0.0012 + px * 0.00002;
+          px = Math.max(1, px + step);
+          if (s === state.symbol || Math.random() < 0.35) trades.push({ s, p: +px.toFixed(2), v: Math.round(20 + Math.random() * 400), t: nowMs });
+          else state.prices[s] = px;
+        }
+        if (trades.length) onTrades(trades);
+      }, 450);
+    },
+    stop() { if (this.timer) clearInterval(this.timer); this.timer = null; },
+  };
+
+  /* ---------------- Live feed (Finnhub WebSocket) ---------------- */
+  const Live = {
+    ws: null, subs: new Set(), backoff: 1000, retry: null, status: 'off', pollTimer: null,
+    desired() {
+      const s = new Set([state.symbol, ...state.watchlist]);
+      for (const p of Paper.data.positions) s.add(p.symbol);
+      for (const o of Paper.data.orders) s.add(o.symbol);
+      return [...s].slice(0, 45);
+    },
+    start() {
+      this.stop();
+      if (settings.demo) { Demo.start(); this.setStatus('demo'); return; }
+      if (settings.finnhubKey) this.connect();
+      else if (settings.twelveKey) { this.setStatus('poll'); this.pollTimer = setInterval(() => pollTwelve(), 60000); }
+      else this.setStatus('off');
+    },
+    stop() {
+      Demo.stop();
+      clearTimeout(this.retry); clearInterval(this.pollTimer); this.pollTimer = null;
+      if (this.ws) { this.ws.onclose = null; try { this.ws.close(); } catch { /* ignore */ } }
+      this.ws = null; this.subs = new Set();
+    },
+    connect() {
+      this.setStatus('connecting');
+      let ws;
+      try { ws = new WebSocket('wss://ws.finnhub.io?token=' + encodeURIComponent(settings.finnhubKey)); } catch { this.setStatus('error'); return; }
+      this.ws = ws;
+      ws.onopen = () => { this.backoff = 1000; this.subs = new Set(); this.resubscribe(); this.setStatus('connected'); };
+      ws.onmessage = (ev) => {
+        let m; try { m = JSON.parse(ev.data); } catch { return; }
+        if (m.type === 'trade' && Array.isArray(m.data)) onTrades(m.data);
+        else if (m.type === 'error') showError('بث Finnhub: ' + (m.msg || 'خطأ'));
+      };
+      ws.onclose = () => {
+        this.setStatus('reconnecting');
+        this.retry = setTimeout(() => this.connect(), this.backoff);
+        this.backoff = Math.min(this.backoff * 2, 30000);
+      };
+      ws.onerror = () => { /* onclose handles retry */ };
+    },
+    resubscribe() {
+      if (!this.ws || this.ws.readyState !== 1) return;
+      const want = new Set(this.desired());
+      for (const s of this.subs) if (!want.has(s)) this.ws.send(JSON.stringify({ type: 'unsubscribe', symbol: s }));
+      for (const s of want) if (!this.subs.has(s)) this.ws.send(JSON.stringify({ type: 'subscribe', symbol: s }));
+      this.subs = want;
+    },
+    setStatus(s) { this.status = s; renderFeed(); },
+  };
+
+  async function pollTwelve() {
+    if (!settings.twelveKey || settings.demo) return;
+    try {
+      const j = await td('time_series', { symbol: state.symbol, interval: state.tf, outputsize: 3, timezone: 'UTC', order: 'ASC' });
+      const fresh = parseTD(j.values, state.tf);
+      for (const b of fresh) mergeBar(b);
+      const lb = state.bars[state.bars.length - 1];
+      if (lb) { state.prices[state.symbol] = lb.close; state.lastTradeAt = Date.now(); state.lastTrade = { p: lb.close, t: Date.now() }; }
+      Chart.setCandles(); analyzeNow(); scheduleLive();
+    } catch (e) { showError(e.message); }
+  }
+  function mergeBar(b) {
+    const bars = state.bars; const lb = bars[bars.length - 1];
+    if (!lb || b.time > lb.time) bars.push(b);
+    else if (b.time === lb.time) bars[bars.length - 1] = b;
+  }
+
+  function bucketTime(sec, tf) {
+    if (tf === '1day') return nyDayKey(sec) * 86400;
+    const iv = TF_SEC[tf]; const off = tf === '1h' ? 1800 : 0;
+    return Math.floor((sec - off) / iv) * iv + off;
+  }
+
+  let lastAnalyzeAt = 0;
+  function onTrades(trades) {
+    const now = Date.now();
+    for (const tr of trades) {
+      if (!tr || !tr.s || !isFinite(tr.p)) continue;
+      const sec = Math.floor(tr.t / 1000);
+      const regular = settings.demo || isRegularSession(sec);
+      const prev = state.prices[tr.s];
+      state.prices[tr.s] = tr.p;
+      if (regular) Paper.onPrice(tr.s, tr.p);
+      if (tr.s !== state.symbol) continue;
+      state.lastTrade = { p: tr.p, v: tr.v, t: tr.t, regular, dir: prev == null ? 0 : Math.sign(tr.p - prev) };
+      state.lastTradeAt = now;
+      if (!regular || !state.bars.length) continue;
+      const bt = bucketTime(sec, state.tf);
+      const bars = state.bars; const lb = bars[bars.length - 1];
+      if (bt > lb.time) {
+        bars.push({ time: bt, open: tr.p, high: tr.p, low: tr.p, close: tr.p, volume: tr.v || 0 });
+        if (bars.length > 1500) bars.shift();
+        Chart.updateLast(true);
+        analyzeNow();
+      } else if (bt === lb.time) {
+        lb.high = Math.max(lb.high, tr.p); lb.low = Math.min(lb.low, tr.p); lb.close = tr.p; lb.volume += tr.v || 0;
+        Chart.updateLast(false);
+      }
+      checkZoneAlert(tr.p);
+    }
+    if (now - lastAnalyzeAt > 2500) analyzeNow();
+    scheduleLive();
+  }
+
+  /* ---------------- Loading a symbol ---------------- */
+  let loadToken = 0;
+  async function loadSymbol(sym) {
+    sym = String(sym || '').trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
+    if (!sym) return;
+    const token = ++loadToken;
+    state.symbol = sym; store.set('symbol', sym);
+    Object.assign(state, { bars: [], daily: [], analysis: null, dailyInfo: null, quote: null, profile: null, news: [], earnings: [], recs: null, metric: null, lastTrade: null, lastTradeAt: 0, errors: [] });
+    if (state.ai && state.ai.symbol !== sym) state.ai = null;
+    $('#symInput').value = sym;
+    Chart.note('جاري تحميل بيانات ' + sym + '…');
+    renderAll();
+    const errs = [];
+    if (settings.demo) {
+      state.bars = Demo.history(sym, state.tf);
+      if (state.prices[sym] != null) Demo.anchor(state.bars, state.prices[sym]);
+      state.daily = state.tf === '1day' ? state.bars : Demo.anchor(Demo.history(sym, '1day', 300), state.bars[state.bars.length - 1].close);
+      const d = state.daily;
+      state.prevClose[sym] = d[d.length - 2].close;
+      state.quote = { c: state.bars[state.bars.length - 1].close, pc: d[d.length - 2].close, o: d[d.length - 1].open, h: d[d.length - 1].high, l: d[d.length - 1].low };
+      state.profile = { name: sym + ' (بيانات محاكاة)', finnhubIndustry: '—' };
+      state.news = Demo.news(sym);
+      state.recs = null; state.earnings = [];
+    } else {
+      const jobs = [];
+      if (settings.twelveKey) {
+        jobs.push(td('time_series', { symbol: sym, interval: state.tf, outputsize: state.tf === '1day' ? 400 : 500, timezone: 'UTC', order: 'ASC' })
+          .then((j) => { state.bars = parseTD(j.values, state.tf); }).catch((e) => errs.push(e.message)));
+        if (state.tf !== '1day') jobs.push(td('time_series', { symbol: sym, interval: '1day', outputsize: 260, timezone: 'UTC', order: 'ASC' })
+          .then((j) => { state.daily = parseTD(j.values, '1day'); }).catch((e) => errs.push('اليومي: ' + e.message)));
+      } else errs.push('أضف مفتاح Twelve Data في الإعدادات لتحميل الشموع التاريخية. بدونه يُبنى الرسم من الصفقات اللحظية فقط.');
+      if (settings.finnhubKey) {
+        const today = new Date();
+        jobs.push(fh('quote', { symbol: sym }).then((q) => { if (q && q.c) { state.quote = q; state.prevClose[sym] = q.pc; if (state.prices[sym] == null) state.prices[sym] = q.c; } }).catch((e) => errs.push(e.message)));
+        jobs.push(fh('stock/profile2', { symbol: sym }).then((p) => { state.profile = p && p.name ? p : null; }).catch(() => {}));
+        jobs.push(fh('company-news', { symbol: sym, from: ymd(new Date(Date.now() - 7 * 864e5)), to: ymd(today) })
+          .then((n) => { state.news = (Array.isArray(n) ? n : []).sort((a, b) => b.datetime - a.datetime).slice(0, 25); }).catch((e) => errs.push('الأخبار: ' + e.message)));
+        jobs.push(fh('stock/recommendation', { symbol: sym }).then((r) => { state.recs = Array.isArray(r) && r.length ? r[0] : null; }).catch(() => {}));
+        jobs.push(fh('calendar/earnings', { symbol: sym, from: ymd(today), to: ymd(new Date(Date.now() + 45 * 864e5)) })
+          .then((c) => { state.earnings = (c && c.earningsCalendar) || []; }).catch(() => {}));
+        jobs.push(fh('stock/metric', { symbol: sym, metric: 'all' }).then((m) => { state.metric = (m && m.metric) || null; }).catch(() => {}));
+        jobs.push(fh('stock/market-status', { exchange: 'US' }).then((s) => { state.marketStatus = { ...s, _at: Date.now() }; }).catch(() => {}));
+      } else errs.push('أضف مفتاح Finnhub في الإعدادات للأسعار اللحظية والأخبار.');
+      await Promise.allSettled(jobs);
+      if (state.tf === '1day') state.daily = state.bars;
+      if (state.quote && state.bars.length) state.prices[sym] = state.prices[sym] ?? state.bars[state.bars.length - 1].close;
+      if (!state.bars.length && state.quote && state.quote.c && state.tf !== '1day') {
+        // ticks-only mode: seed one bar from the quote
+        const t = bucketTime(Math.floor(Date.now() / 1000), state.tf);
+        state.bars = [{ time: t, open: state.quote.c, high: state.quote.c, low: state.quote.c, close: state.quote.c, volume: 0 }];
+      }
+      loadWatchQuotes();
+    }
+    if (token !== loadToken) return;
+    state.errors = errs;
+    if (errs.length) showError(errs.join(' · ')); else hideError();
+    Chart.setCandles(true);
+    analyzeNow();
+    renderAll();
+    Live.resubscribe();
+    if (settings.demo) { /* demo prices follow history */ state.prices[sym] = state.bars[state.bars.length - 1].close; }
+  }
+
+  let watchQuotesAt = 0;
+  async function loadWatchQuotes() {
+    if (!settings.finnhubKey || Date.now() - watchQuotesAt < 5 * 60e3) return;
+    watchQuotesAt = Date.now();
+    for (const s of state.watchlist) {
+      if (s === state.symbol) continue;
+      try { const q = await fh('quote', { symbol: s }); if (q && q.c) { state.prevClose[s] = q.pc; if (state.prices[s] == null) state.prices[s] = q.c; } } catch { break; }
+    }
+    renderWatch();
+  }
+
+  /* ---------------- Analysis ---------------- */
+  function earningsDays() {
+    const list = (state.earnings || []).filter((e) => e.symbol === state.symbol || !e.symbol);
+    if (!list.length) return null;
+    const today = new Date(); const t0 = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+    const ds = list.map((e) => Math.round((Date.parse(e.date + 'T00:00:00Z') - t0) / 864e5)).filter((d) => d >= 0).sort((a, b) => a - b);
+    return ds.length ? ds[0] : null;
+  }
+  function nextEarnings() {
+    const list = (state.earnings || []).filter((e) => (e.symbol === state.symbol || !e.symbol) && Date.parse(e.date) >= Date.now() - 864e5).sort((a, b) => a.date.localeCompare(b.date));
+    return list[0] || null;
+  }
+  function analyzeNow() {
+    lastAnalyzeAt = Date.now();
+    if (state.bars.length < 30) { state.analysis = { error: state.bars.length ? 'بيانات غير كافية بعد (' + state.bars.length + ' شمعة). يحتاج التحليل 30 شمعة على الأقل.' : 'لا توجد بيانات.' }; renderAnalysis(); return; }
+    state.dailyInfo = E.dailyBias(state.daily);
+    const mk = market();
+    const avgDailyVol = state.dailyInfo && state.dailyInfo.avgVol ? state.dailyInfo.avgVol : (state.metric && state.metric['10DayAverageTradingVolume'] ? state.metric['10DayAverageTradingVolume'] * 1e6 : null);
+    const ctx = {
+      tf: state.tf, earningsDays: earningsDays(), marketPhase: mk.phase, minutesSinceOpen: mk.minutesSinceOpen, minutesToClose: mk.minutesToClose,
+      avgDailyVol, higherBias: state.tf === '1day' ? null : (state.dailyInfo ? state.dailyInfo.bias : null),
+      sessionKey: state.tf === '1day' ? null : (b) => nyDayKey(b.time),
+    };
+    const prevKey = state.analysisKey, prevDec = state.analysis && state.analysis.plan ? state.analysis.plan.decision : null;
+    state.analysis = E.analyze(state.bars, { account: settings.account, riskPct: settings.riskPct, maxPosPct: settings.maxPosPct }, ctx);
+    state.analysisKey = state.symbol + '|' + state.tf;
+    const dec = state.analysis.plan ? state.analysis.plan.decision : null;
+    if (prevKey === state.analysisKey && prevDec && dec !== prevDec && dec === 'BUY') alertMsg(`${state.symbol}: ظهرت إشارة شراء (${state.analysis.plan.setup}). راجع الخطة.`, 'up');
+    else if (prevKey === state.analysisKey && prevDec === 'BUY' && dec !== 'BUY') toast(`${state.symbol}: إشارة الشراء لم تعد قائمة (${DEC_AR[dec]}).`, 'warn');
+    renderAnalysis();
+  }
+
+  /* ---------------- Chart ---------------- */
+  const tzOff = -new Date().getTimezoneOffset() * 60;
+  const ct = (t) => (state.tf === '1day' ? t : t + tzOff);
+  function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function themeColors() { return { bg: cssVar('--surface'), fg: cssVar('--fg'), muted: cssVar('--muted'), grid: cssVar('--grid'), line: cssVar('--line'), accent: cssVar('--accent'), up: cssVar('--up'), down: cssVar('--down'), warn: cssVar('--warn') }; }
+  function alpha(hex, a) { const h = hex.replace('#', ''); if (h.length !== 6) return hex; const n = parseInt(h, 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+  const SHORT = { breakout: 'اختراق', breakout_weak: 'اختراق ضعيف', breakdown: 'كسر', double_top: 'قمة مزدوجة', double_bottom: 'قاع مزدوج', bull_flag: 'علم صاعد', bear_flag: 'علم هابط', asc_tri: 'مثلث صاعد', desc_tri: 'مثلث هابط', bull_div: 'دايفرجنس+', bear_div: 'دايفرجنس−', ema_cross_up: 'تقاطع+', ema_cross_dn: 'تقاطع−', bull_engulf: 'ابتلاع+', bear_engulf: 'ابتلاع−', hammer: 'مطرقة', shooting_star: 'شهاب', doji: 'دوجي', hh_hl: 'HH/HL', lh_ll: 'LH/LL' };
+
+  const Chart = {
+    ok: false, lines: [], syncing: false,
+    init() {
+      const LW = window.LightweightCharts;
+      if (!LW) { this.note('تعذّر تحميل مكتبة الرسم البياني. تأكد من اتصال الإنترنت ثم أعد فتح الصفحة.'); return; }
+      const c = themeColors();
+      const base = (extra = {}) => Object.assign({
+        autoSize: true,
+        layout: { background: { type: 'solid', color: c.bg }, textColor: c.muted, fontFamily: 'IBM Plex Mono, ui-monospace, monospace', fontSize: 11 },
+        grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
+        rightPriceScale: { borderColor: c.line, minimumWidth: 72 },
+        timeScale: { borderColor: c.line, timeVisible: true, secondsVisible: false, rightOffset: 6 },
+        crosshair: { mode: LW.CrosshairMode.Normal },
+      }, extra);
+      this.LW = LW;
+      this.main = LW.createChart($('#chart'), base());
+      this.candle = this.main.addCandlestickSeries({ upColor: c.up, downColor: c.down, borderVisible: false, wickUpColor: c.up, wickDownColor: c.down, priceFormat: { type: 'price', precision: 2, minMove: 0.01 } });
+      this.vol = this.main.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', lastValueVisible: false, priceLineVisible: false });
+      this.main.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+      const ln = (color, width = 1.5, style = 0) => this.main.addLineSeries({ color, lineWidth: width, lineStyle: style, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+      this.ema9 = ln(c.accent, 2); this.ema21 = ln(c.muted, 2); this.vwap = ln('#7C8CF8', 1.5, 2);
+      this.bbU = ln(c.muted, 1, 1); this.bbL = ln(c.muted, 1, 1);
+      this.rsiC = LW.createChart($('#rsiChart'), base({ timeScale: { visible: false, borderColor: c.line }, handleScale: false }));
+      this.rsi = this.rsiC.addLineSeries({ color: c.accent, lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: false, autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }) });
+      this.rsiLines = [70, 50, 30].map((v) => this.rsi.createPriceLine({ price: v, color: v === 50 ? c.grid : c.muted, lineWidth: 1, lineStyle: 2, axisLabelVisible: false }));
+      const sync = (from, to) => from.timeScale().subscribeVisibleLogicalRangeChange((r) => {
+        if (!r || this.syncing) return; this.syncing = true; to.timeScale().setVisibleLogicalRange(r); this.syncing = false;
+      });
+      sync(this.main, this.rsiC); sync(this.rsiC, this.main);
+      this.ok = true;
+    },
+    applyTheme() {
+      if (!this.ok) return;
+      const c = themeColors();
+      const o = { layout: { background: { type: 'solid', color: c.bg }, textColor: c.muted }, grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } }, rightPriceScale: { borderColor: c.line }, timeScale: { borderColor: c.line } };
+      this.main.applyOptions(o); this.rsiC.applyOptions(o);
+      this.candle.applyOptions({ upColor: c.up, downColor: c.down, wickUpColor: c.up, wickDownColor: c.down });
+      this.ema9.applyOptions({ color: c.accent }); this.ema21.applyOptions({ color: c.muted });
+      this.bbU.applyOptions({ color: c.muted }); this.bbL.applyOptions({ color: c.muted }); this.rsi.applyOptions({ color: c.accent });
+      this.setCandles(); this.drawOverlays();
+    },
+    note(txt) { const n = $('#chartNote'); n.textContent = txt || ''; n.hidden = !txt; },
+    volBar(b, c) { return { time: ct(b.time), value: b.volume || 0, color: alpha(b.close >= b.open ? c.up : c.down, 0.35) }; },
+    setCandles(fit) {
+      if (!this.ok) return;
+      const c = themeColors();
+      const bars = state.bars;
+      this.candle.applyOptions({ priceFormat: { type: 'price', precision: bars.length && bars[bars.length - 1].close < 2 ? 4 : 2, minMove: bars.length && bars[bars.length - 1].close < 2 ? 0.0001 : 0.01 } });
+      this.main.applyOptions({ timeScale: { timeVisible: state.tf !== '1day' } });
+      this.candle.setData(bars.map((b) => ({ time: ct(b.time), open: b.open, high: b.high, low: b.low, close: b.close })));
+      this.vol.setData(bars.map((b) => this.volBar(b, c)));
+      if (fit) {
+        const n = bars.length; const show = state.tf === '1day' ? 140 : 160;
+        if (n > show) this.main.timeScale().setVisibleLogicalRange({ from: n - show, to: n + 4 }); else this.main.timeScale().fitContent();
+      }
+      this.note(bars.length ? '' : (settings.demo || settings.finnhubKey || settings.twelveKey ? 'لا توجد بيانات لهذا الرمز.' : 'أضف مفاتيح البيانات من الإعدادات، أو جرّب الوضع التجريبي.'));
+    },
+    updateLast(isNew) {
+      if (!this.ok || !state.bars.length) return;
+      const b = state.bars[state.bars.length - 1];
+      try {
+        this.candle.update({ time: ct(b.time), open: b.open, high: b.high, low: b.low, close: b.close });
+        this.vol.update(this.volBar(b, themeColors()));
+      } catch { this.setCandles(); }
+      if (isNew) this.drawOverlays();
+    },
+    series(arr) { return state.bars.map((b, i) => (arr[i] == null ? { time: ct(b.time) } : { time: ct(b.time), value: arr[i] })); },
+    drawOverlays() {
+      if (!this.ok) return;
+      const a = state.analysis, ov = settings.overlays, c = themeColors();
+      for (const l of this.lines) this.candle.removePriceLine(l);
+      this.lines = [];
+      const has = a && !a.error && a.ind;
+      const empty = [];
+      this.ema9.setData(has && ov.ema ? this.series(a.ind.ema9Arr) : empty);
+      this.ema21.setData(has && ov.ema ? this.series(a.ind.ema21Arr) : empty);
+      this.vwap.setData(has && ov.vwap && state.tf !== '1day' ? this.series(a.ind.vwapArr) : empty);
+      this.bbU.setData(has && ov.bb ? this.series(a.ind.bb.upper) : empty);
+      this.bbL.setData(has && ov.bb ? this.series(a.ind.bb.lower) : empty);
+      this.rsi.setData(has ? this.series(a.ind.rsiArr) : empty);
+      const LS = this.LW.LineStyle;
+      const pl = (price, color, title, style = LS.Dashed, width = 1, label = true) => { if (price == null || !isFinite(price)) return; this.lines.push(this.candle.createPriceLine({ price, color, lineWidth: width, lineStyle: style, axisLabelVisible: label, title })); };
+      if (has && ov.levels) {
+        for (const s of a.levels.supports) pl(s.price, alpha(c.up, 0.55), '', LS.Dotted, 1, false);
+        for (const r of a.levels.resistances) pl(r.price, alpha(c.down, 0.55), '', LS.Dotted, 1, false);
+      }
+      const plan = activePlan();
+      if (plan && ov.plan) {
+        pl(plan.zoneHigh, c.accent, 'دخول', LS.Dashed, 1);
+        if (plan.zoneLow !== plan.zoneHigh) pl(plan.zoneLow, c.accent, '', LS.Dashed, 1, false);
+        pl(plan.stop, c.down, 'وقف', LS.Solid, 2);
+        pl(plan.t1, c.up, 'هدف 1', LS.Dashed, 1);
+        pl(plan.t2, c.up, 'هدف 2', LS.Dashed, 1);
+      }
+      for (const p of Paper.data.positions.filter((p) => p.symbol === state.symbol)) pl(p.entry, c.fg, 'مركزك', LS.Solid, 1);
+      let markers = [];
+      if (has && ov.marks) {
+        markers = a.patterns.filter((p) => p.i != null && p.bias !== 0 && state.bars[p.i]).map((p) => ({
+          time: ct(state.bars[p.i].time), position: p.bias > 0 ? 'belowBar' : 'aboveBar', color: p.bias > 0 ? c.up : c.down,
+          shape: p.bias > 0 ? 'arrowUp' : 'arrowDown', text: SHORT[p.id] || '',
+        }));
+        const seen = new Set();
+        markers = markers.sort((x, y) => x.time - y.time).filter((m) => { const k = m.time + m.position; if (seen.has(k)) return false; seen.add(k); return true; });
+      }
+      this.candle.setMarkers(markers);
+    },
+  };
+
+  function activePlan() {
+    const ai = state.ai && state.ai.symbol === state.symbol && state.ai.tf === state.tf && state.ai.useOnChart ? state.ai.data : null;
+    if (ai && ai.entry && ai.entry.zone_low != null) {
+      const t = ai.targets || [];
+      return { zoneLow: ai.entry.zone_low, zoneHigh: ai.entry.zone_high ?? ai.entry.zone_low, stop: ai.stop_loss, t1: t[0] && t[0].price, t2: t[1] && t[1].price, src: 'ai' };
+    }
+    const a = state.analysis;
+    if (!a || a.error || a.plan.decision === 'AVOID') return null;
+    return { ...a.plan, src: 'engine' };
+  }
+
+  /* ---------------- Paper trading ---------------- */
+  const Paper = {
+    data: store.get('paper', null) || { start: settings.account, cash: settings.account, positions: [], orders: [], history: [] },
+    save() { store.set('paper', this.data); },
+    reset(amount) { this.data = { start: amount, cash: amount, positions: [], orders: [], history: [] }; this.save(); renderPaper(); Chart.drawOverlays(); },
+    equity() { let v = this.data.cash; for (const p of this.data.positions) v += p.qtyOpen * (state.prices[p.symbol] ?? p.entry); return v; },
+    open({ symbol, qty, price, stop, t1, t2, tf, kind }) {
+      qty = Math.floor(qty);
+      if (!(qty > 0)) return toast('أدخل كمية صحيحة.', 'warn');
+      if (!(price > 0)) return toast('سعر الدخول غير صالح.', 'warn');
+      if (!(stop < price)) return toast('وقف الخسارة يجب أن يكون أقل من سعر الدخول.', 'warn');
+      if (!(t1 > price && t2 > t1)) return toast(`الأهداف يجب أن تكون فوق سعر الدخول (${fmt(price)}) والهدف الثاني أعلى من الأول. عدّلها أو استخدم أمراً محدداً داخل منطقة الدخول.`, 'warn');
+      if (kind === 'limit') {
+        this.data.orders.push({ id: 'o' + Date.now(), symbol, qty, limit: price, stop, t1, t2, tf, createdAt: Date.now() });
+        this.save(); toast(`أمر شراء محدد: ${qty} ${symbol} عند ${fmt(price)} أو أقل.`, 'warn');
+      } else {
+        const cost = qty * price;
+        if (cost > this.data.cash + 1e-6) return toast(`الرصيد التجريبي غير كافٍ (${money(this.data.cash)}).`, 'warn');
+        this.data.cash -= cost;
+        this.data.positions.push({ id: 'p' + Date.now(), symbol, qty, qtyOpen: qty, entry: price, stop, origStop: stop, t1, t2, t1Hit: false, tf, openedAt: Date.now() });
+        this.save(); toast(`تم الشراء التجريبي: ${qty} ${symbol} بسعر ${fmt(price)}`, 'up');
+      }
+      Live.resubscribe(); renderPaper(); Chart.drawOverlays();
+    },
+    closePart(pos, qty, price, reason) {
+      qty = Math.min(qty, pos.qtyOpen); if (qty <= 0) return;
+      pos.qtyOpen -= qty; this.data.cash += qty * price;
+      const R = pos.entry - pos.origStop;
+      this.data.history.unshift({ posId: pos.id, symbol: pos.symbol, qty, entry: pos.entry, exit: price, pnl: (price - pos.entry) * qty, r: R > 0 ? (price - pos.entry) / R : null, reason, openedAt: pos.openedAt, closedAt: Date.now() });
+      if (pos.qtyOpen <= 0) this.data.positions = this.data.positions.filter((p) => p !== pos);
+      this.save();
+    },
+    onPrice(sym, px) {
+      let changed = false;
+      for (const o of [...this.data.orders]) {
+        if (o.symbol !== sym || px > o.limit) continue;
+        const fill = Math.min(px, o.limit);
+        this.data.orders = this.data.orders.filter((x) => x !== o);
+        if (o.qty * fill > this.data.cash) { toast(`أُلغي أمر ${sym}: الرصيد غير كافٍ.`, 'warn'); continue; }
+        this.data.cash -= o.qty * fill;
+        this.data.positions.push({ id: 'p' + Date.now(), symbol: sym, qty: o.qty, qtyOpen: o.qty, entry: fill, stop: o.stop, origStop: o.stop, t1: o.t1, t2: o.t2, t1Hit: false, tf: o.tf, openedAt: Date.now() });
+        alertMsg(`تنفّذ أمرك: شراء ${o.qty} ${sym} بسعر ${fmt(fill)}`, 'up'); changed = true;
+      }
+      for (const p of [...this.data.positions]) {
+        if (p.symbol !== sym) continue;
+        if (px <= p.stop) { const why = p.t1Hit ? 'وقف عند سعر الدخول' : 'وقف الخسارة'; this.closePart(p, p.qtyOpen, px, why); alertMsg(`${sym}: خرجت بـ${why} عند ${fmt(px)}`, p.t1Hit ? 'warn' : 'down'); changed = true; continue; }
+        if (!p.t1Hit && p.t1 && px >= p.t1) {
+          const half = Math.max(1, Math.floor(p.qtyOpen / 2));
+          p.t1Hit = true; p.stop = p.entry;
+          this.closePart(p, half, px, 'الهدف الأول (نصف الكمية)');
+          alertMsg(`${sym}: تحقق الهدف الأول ${fmt(px)}. بعت النصف ورفعت الوقف لسعر الدخول.`, 'up'); changed = true;
+          if (p.qtyOpen <= 0) continue;
+        }
+        if (p.t2 && px >= p.t2) { this.closePart(p, p.qtyOpen, px, 'الهدف الثاني'); alertMsg(`${sym}: تحقق الهدف الثاني ${fmt(px)} 🎯`, 'up'); changed = true; }
+      }
+      if (changed) { this.save(); Live.resubscribe(); renderPaper(); Chart.drawOverlays(); }
+    },
+    stats() {
+      const h = this.data.history;
+      const byPos = new Map();
+      for (const x of h) { const k = x.posId; const o = byPos.get(k) || { pnl: 0, rSum: 0, qty: 0 }; o.pnl += x.pnl; byPos.set(k, o); }
+      const closedIds = new Set(h.map((x) => x.posId));
+      for (const p of this.data.positions) closedIds.delete(p.id);
+      const closed = [...closedIds].map((id) => byPos.get(id));
+      const wins = closed.filter((c) => c.pnl > 0).length;
+      const realized = h.reduce((s, x) => s + x.pnl, 0);
+      const rs = h.filter((x) => x.r != null);
+      const avgR = rs.length ? rs.reduce((s, x) => s + x.r * x.qty, 0) / rs.reduce((s, x) => s + x.qty, 0) : null;
+      return { closed: closed.length, winRate: closed.length ? (wins / closed.length) * 100 : null, realized, avgR };
+    },
+  };
+
+  /* ---------------- Alerts ---------------- */
+  let audioCtx = null;
+  document.addEventListener('pointerdown', () => { if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch { /* no audio */ } } }, { once: true });
+  function beep(kind) {
+    if (!settings.sound || !audioCtx) return;
+    try {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.frequency.value = kind === 'down' ? 330 : kind === 'up' ? 880 : 600; o.type = 'sine';
+      g.gain.setValueAtTime(0.0001, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
+      o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.4);
+    } catch { /* ignore */ }
+  }
+  function toast(msg, kind = '') {
+    const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = msg;
+    $('#toasts').appendChild(el); setTimeout(() => el.remove(), 6000);
+  }
+  function alertMsg(msg, kind) {
+    toast(msg, kind); beep(kind);
+    try { if (document.hidden && 'Notification' in window && Notification.permission === 'granted') new Notification('مِرصاد', { body: msg }); } catch { /* ignore */ }
+  }
+  const fired = new Set();
+  function checkZoneAlert(px) {
+    const p = activePlan(); if (!p || p.zoneLow == null) return;
+    const k = `${state.symbol}|${state.tf}|${p.zoneLow}|${p.zoneHigh}`;
+    if (px >= p.zoneLow && px <= p.zoneHigh && !fired.has(k)) { fired.add(k); alertMsg(`${state.symbol} دخل منطقة الدخول ${fmt(p.zoneLow)} – ${fmt(p.zoneHigh)}`, 'warn'); }
+  }
+
+  /* ---------------- AI ---------------- */
+  function buildPackage() {
+    const a = state.analysis, s = state.symbol, mk = market(), q = state.quote, d = state.dailyInfo, pr = state.profile;
+    const now = new Date();
+    const nyNow = nyParts(now);
+    const L = [];
+    const n2 = (x) => (x == null || !isFinite(x) ? 'n/a' : (+x).toFixed(2));
+    L.push(`=== DATA PACKAGE · generated ${now.toISOString()} ===`);
+    L.push(settings.demo ? 'MODE: DEMO — ALL PRICES AND NEWS ARE SIMULATED. Analyze for practice only and state clearly that the data are simulated.' : 'MODE: LIVE market data (Finnhub trades/news, Twelve Data candles).');
+    L.push(`Symbol: ${s}${pr && pr.name ? ' — ' + pr.name : ''}${pr && pr.finnhubIndustry ? ' · ' + pr.finnhubIndustry : ''}${pr && pr.exchange ? ' · ' + pr.exchange : ''}${pr && pr.marketCapitalization ? ' · market cap $' + fmt(pr.marketCapitalization / 1000, 1) + 'B' : ''}`);
+    L.push(`Time now: New York ${nyNow.y}-${String(nyNow.m).padStart(2, '0')}-${String(nyNow.d).padStart(2, '0')} ${String(nyNow.h).padStart(2, '0')}:${String(nyNow.min).padStart(2, '0')} · User local (Riyadh) ${localDateTime(now.getTime())}`);
+    L.push(`Market phase: ${mk.phase}${mk.phase === 'open' && !mk.simulated ? ` (${mk.minutesSinceOpen} min since open, ${mk.minutesToClose} min to close)` : ''}${mk.nextOpen ? ' · next regular open (user local time): ' + localDateTime(mk.nextOpen) : ''}`);
+    L.push(`Trading timeframe: ${state.tf}`);
+    const px = state.prices[s] ?? (a && a.ind ? a.ind.price : null);
+    L.push(`Last price: ${n2(px)}${q && q.pc ? ` · prev close ${n2(q.pc)} · change ${pct((px / q.pc - 1) * 100)}` : ''}${q && q.o ? ` · day O/H/L ${n2(q.o)}/${n2(q.h)}/${n2(q.l)}` : ''}${state.lastTradeAt ? ' · last trade ' + Math.round((Date.now() - state.lastTradeAt) / 1000) + 's ago' : ''}`);
+    L.push(`User risk settings: account $${fmt(settings.account, 0)}, risk ${settings.riskPct}% per trade ($${fmt(settings.account * settings.riskPct / 100, 0)}), max position ${settings.maxPosPct}% ($${fmt(settings.account * settings.maxPosPct / 100, 0)}). Long-only beginner.`);
+    if (d) {
+      L.push('', '-- HIGHER TIMEFRAME (daily) --');
+      L.push(`bias ${d.bias}; close ${n2(d.price)}; EMA21 ${n2(d.ema21)}; SMA50 ${n2(d.sma50)}; SMA200 ${n2(d.sma200)}; RSI14 ${n2(d.rsi)}; ATR14 ${n2(d.atr)}; 52w high ${n2(d.hi52)} / low ${n2(d.lo52)}; 5-day change ${pct(d.chg5)}; 20-day change ${pct(d.chg20)}; avg daily volume ${vol(d.avgVol)}`);
+    }
+    if (a && !a.error) {
+      const i = a.ind;
+      L.push('', `-- TRADING TIMEFRAME INDICATORS (${state.tf}) --`);
+      L.push(`EMA9 ${n2(i.ema9)}; EMA21 ${n2(i.ema21)} (5-bar slope ${n2(i.ema21Slope)}); SMA50 ${n2(i.sma50)}; SMA200 ${n2(i.sma200)}; VWAP ${n2(i.vwap)}`);
+      L.push(`RSI14 ${n2(i.rsi)} (prev ${n2(i.rsiPrev)}); MACD line ${n2(i.macdLine)} signal ${n2(i.macdSignal)} hist ${n2(i.macdHist)} (prev hist ${n2(i.macdHistPrev)})`);
+      L.push(`Bollinger 20,2: upper ${n2(i.bbUpper)} mid ${n2(i.bbMid)} lower ${n2(i.bbLower)}; ATR14 ${n2(i.atr)}; ADX14 ${n2(i.adx)} (+DI ${n2(i.pdi)} / -DI ${n2(i.mdi)}); relative volume ${n2(i.relVol)}x`);
+      L.push('', '-- STRUCTURE & LEVELS --');
+      L.push(`swing structure: ${a.structure}`);
+      L.push(`supports: ${a.levels.supports.map((l) => `${n2(l.price)} (${l.touches} touches)`).join(', ') || 'none'}`);
+      L.push(`resistances: ${a.levels.resistances.map((l) => `${n2(l.price)} (${l.touches} touches)`).join(', ') || 'none'}`);
+      L.push(`recent swing highs: ${a.swings.highs.slice(-4).map((x) => n2(x.price)).join(', ') || 'none'} · recent swing lows: ${a.swings.lows.slice(-4).map((x) => n2(x.price)).join(', ') || 'none'}`);
+      L.push('', '-- DETECTED PATTERNS (candidates — confirm or reject) --');
+      if (!a.patterns.length) L.push('none');
+      for (const p of a.patterns) L.push(`- ${p.id} [${p.bias > 0 ? 'bullish' : p.bias < 0 ? 'bearish' : 'neutral'}, strength ${p.strength}/3]${p.level ? ' level ' + n2(p.level) : ''}`);
+      const pl = a.plan;
+      L.push('', '-- RULES-BASED ENGINE PLAN --');
+      L.push(`decision ${pl.decision}; signal score ${a.signal.score}/100 (${a.signal.parts.map((x) => (x.pts > 0 ? '+' : '') + x.pts).join(' ')}); setup "${pl.setup}"; entry type ${pl.entryType}`);
+      L.push(`entry zone ${n2(pl.zoneLow)}–${n2(pl.zoneHigh)}; stop ${n2(pl.stop)}; T1 ${n2(pl.t1)} (${pl.rr1}R); T2 ${n2(pl.t2)} (${pl.rr2}R); 1R = ${n2(pl.R)}; size ${pl.shares} shares, $ at risk ${n2(pl.riskDollars)}`);
+      if (pl.guards.length) L.push(`guards: ${pl.guards.map((g) => `[${g.level}] ${g.text}`).join(' | ')}`);
+      L.push(`engine reasons: ${pl.why.join(' | ')}`);
+      const bars = state.bars.slice(-60);
+      L.push('', `-- LAST ${bars.length} BARS (${state.tf}; time = New York) time,open,high,low,close,volume --`);
+      for (const b of bars) {
+        const t = new Date((b.time + offsetFor(b.time) * 60) * 1000).toISOString();
+        L.push(`${state.tf === '1day' ? t.slice(0, 10) : t.slice(5, 16).replace('T', ' ')},${n2(b.open)},${n2(b.high)},${n2(b.low)},${n2(b.close)},${Math.round(b.volume)}`);
+      }
+    } else L.push('', 'Indicators unavailable: ' + (a && a.error ? a.error : 'no data'));
+    L.push('', '-- NEWS (newest first, last 7 days) --');
+    if (!state.news.length) L.push('none available');
+    for (const nw of state.news.slice(0, 15)) {
+      const t = new Date((nw.datetime + offsetFor(nw.datetime) * 60) * 1000).toISOString().slice(0, 16).replace('T', ' ');
+      L.push(`[${t} NY | ${nw.source || ''}] ${nw.headline}${nw.summary ? ' — ' + String(nw.summary).slice(0, 220) : ''}`);
+    }
+    const r = state.recs;
+    L.push('', '-- ANALYST CONSENSUS --');
+    L.push(r ? `${r.period}: strongBuy ${r.strongBuy}, buy ${r.buy}, hold ${r.hold}, sell ${r.sell}, strongSell ${r.strongSell}` : 'not available');
+    const ne = nextEarnings(); const ed = earningsDays();
+    L.push('', '-- EARNINGS --');
+    L.push(ne ? `next earnings ${ne.date}${ne.hour ? ' (' + ne.hour + ')' : ''}, in ${ed} calendar days${ne.epsEstimate != null ? ', EPS estimate ' + ne.epsEstimate : ''}` : (settings.finnhubKey && !settings.demo ? 'no earnings date in the next 45 days' : 'unknown'));
+    return L.join('\n');
+  }
+
+  function parseJSONLoose(t) {
+    try { return JSON.parse(t); } catch { /* continue */ }
+    const f = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (f) { try { return JSON.parse(f[1]); } catch { /* continue */ } }
+    const a = t.indexOf('{'), b = t.lastIndexOf('}');
+    if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch { /* fall through */ } }
+    return null;
+  }
+  function validateAI(ai) {
+    const issues = [];
+    if (!ai || !['BUY', 'WAIT', 'AVOID'].includes(ai.decision)) { issues.push('الرد لا يحتوي قراراً صالحاً.'); return issues; }
+    if (ai.decision === 'BUY') {
+      const zl = ai.entry && ai.entry.zone_low, zh = ai.entry && (ai.entry.zone_high ?? ai.entry.zone_low), st = ai.stop_loss;
+      const t = (ai.targets || []).map((x) => x && x.price).filter((x) => x != null);
+      if (zl == null || st == null || t.length < 2) issues.push('خطة الشراء ناقصة (دخول أو وقف أو هدفين).');
+      else {
+        if (!(st < zl)) issues.push('وقف الخسارة ليس أقل من منطقة الدخول.');
+        if (!(t[0] > zh && t[1] > t[0])) issues.push('الأهداف ليست مرتبة فوق منطقة الدخول.');
+        const mid = (zl + zh) / 2, rr = (t[1] - mid) / (mid - st);
+        if (isFinite(rr) && rr < 2) issues.push(`العائد/المخاطرة الفعلي للهدف الثاني ${rr.toFixed(1)} أقل من 2 (قاعدة إلزامية).`);
+      }
+    }
+    return issues;
+  }
+  async function runAI() {
+    if (!settings.anthropicKey) { openPromptModal(); return; }
+    if (state.aiBusy) return;
+    const ctl = new AbortController();
+    const started = Date.now();
+    state.aiBusy = { ctl, started };
+    selectTab('ai'); renderAI();
+    const tick = setInterval(() => { const el = $('#aiElapsed'); if (el) el.textContent = Math.round((Date.now() - started) / 1000) + ' ث'; }, 1000);
+    try {
+      const pkg = buildPackage();
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST', signal: ctl.signal,
+        headers: { 'content-type': 'application/json', 'x-api-key': settings.anthropicKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: settings.model, max_tokens: 6000, system: P.buildSystem('json'), messages: [{ role: 'user', content: pkg + '\n\nApply the full committee process and return the JSON decision now.' }] }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const m = (j.error && j.error.message) || ('HTTP ' + r.status);
+        if (r.status === 401) throw new Error('مفتاح Claude API غير صحيح.');
+        if (r.status === 429) throw new Error('تجاوزت حد الاستخدام في Claude API. انتظر قليلاً.');
+        if (r.status === 529) throw new Error('خوادم Claude مشغولة الآن. أعد المحاولة بعد دقيقة.');
+        if (r.status === 404 || /model/i.test(m)) throw new Error('النموذج غير متاح لحسابك: ' + m + '. غيّره من الإعدادات.');
+        throw new Error('Claude API: ' + m);
+      }
+      const text = (j.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('');
+      const data = parseJSONLoose(text);
+      if (!data) throw new Error('رد الذكاء الاصطناعي لم يكن بصيغة JSON صالحة. أعد المحاولة.');
+      state.ai = { symbol: state.symbol, tf: state.tf, at: Date.now(), priceAt: state.prices[state.symbol], data, issues: validateAI(data), useOnChart: false, demo: settings.demo };
+    } catch (e) {
+      if (e.name !== 'AbortError') state.ai = { symbol: state.symbol, tf: state.tf, at: Date.now(), error: e.message };
+    } finally {
+      clearInterval(tick); state.aiBusy = null; renderAI(); renderPlan(); Chart.drawOverlays();
+    }
+  }
+
+  /* ---------------- Rendering ---------------- */
+  let liveScheduled = false;
+  function scheduleLive() { if (liveScheduled) return; liveScheduled = true; requestAnimationFrame(() => { liveScheduled = false; renderLive(); }); }
+  let lastPxShown = null;
+  function renderLive() {
+    const s = state.symbol, px = state.prices[s] ?? (state.bars.length ? state.bars[state.bars.length - 1].close : null);
+    const pxEl = $('#qPx');
+    pxEl.textContent = px == null ? '—' : fmt(px, px < 2 ? 4 : 2);
+    if (lastPxShown != null && px != null && px !== lastPxShown) {
+      pxEl.classList.remove('flash-up', 'flash-down'); void pxEl.offsetWidth;
+      pxEl.classList.add(px > lastPxShown ? 'flash-up' : 'flash-down');
+      clearTimeout(renderLive.t); renderLive.t = setTimeout(() => pxEl.classList.remove('flash-up', 'flash-down'), 500);
+    }
+    lastPxShown = px;
+    const pc = state.prevClose[s] ?? (state.quote && state.quote.pc);
+    const chg = $('#qChg');
+    if (px != null && pc) { const d = px - pc; chg.textContent = `${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))} (${pct((d / pc) * 100)})`; chg.className = 'chg num ' + (d >= 0 ? 'up' : 'down'); } else { chg.textContent = ''; }
+    const q = state.quote;
+    const dayBar = state.tf === '1day' && state.bars.length ? state.bars[state.bars.length - 1] : null;
+    $('#qO').textContent = fmt(dayBar ? dayBar.open : q && q.o);
+    $('#qH').textContent = fmt(dayBar ? dayBar.high : q && q.h ? Math.max(q.h, px || 0) : null);
+    $('#qL').textContent = fmt(dayBar ? dayBar.low : q && q.l ? Math.min(q.l, px || Infinity) : null);
+    $('#qT').textContent = state.lastTrade ? localTime(state.lastTrade.t) + (state.lastTrade.regular === false ? ' (خارج الجلسة)' : '') : '—';
+    renderWatch(); renderFeed();
+    if (!$('#paperPanel').hidden) renderPaperLive();
+  }
+  function renderFeed() {
+    const el = $('#feed'), tx = $('#feedText');
+    const recent = Date.now() - state.lastTradeAt < 60000;
+    const map = {
+      off: ['', 'غير متصل'], demo: ['pre live', 'بث محاكاة'], poll: ['', 'تحديث كل دقيقة'], connecting: ['', 'جارِ الاتصال…'], reconnecting: ['pre', 'إعادة اتصال…'], error: ['pre', 'خطأ في البث'],
+      connected: recent ? ['open live', 'مباشر'] : ['', 'متصل · لا صفقات الآن'],
+    };
+    const [cls, txt] = map[Live.status] || map.off;
+    el.className = 'pill ' + cls; tx.textContent = txt;
+    const mk = market(); const m = $('#mkt'), mt = $('#mktText');
+    const names = { open: 'السوق مفتوح', pre: 'ما قبل الافتتاح', post: 'ما بعد الإغلاق', closed: 'السوق مغلق' };
+    m.className = 'pill ' + mk.phase;
+    mt.textContent = mk.simulated ? 'سوق محاكاة' : names[mk.phase] + (mk.phase === 'open' ? ` · يغلق ${localTime(mk.closeMs)}` : mk.nextOpen ? ` · يفتح ${localDateTime(mk.nextOpen)}` : '');
+    m.title = 'الأوقات بتوقيت جهازك';
+  }
+  function renderWatch() {
+    const w = $('#watch');
+    const html = state.watchlist.map((s) => {
+      const p = state.prices[s], pc = state.prevClose[s];
+      const ch = p != null && pc ? (p / pc - 1) * 100 : null;
+      return `<button class="chip${s === state.symbol ? ' on' : ''}" data-sym="${esc(s)}"><b>${esc(s)}</b><span class="${ch == null ? '' : ch >= 0 ? 'up' : 'down'}">${p == null ? '—' : fmt(p)}${ch == null ? '' : ' ' + pct(ch, 1)}</span></button>`;
+    }).join('') + `<button class="chip" id="watchToggle" title="إضافة/إزالة الرمز الحالي من قائمة المتابعة"><b>${state.watchlist.includes(state.symbol) ? '−' : '+'} ${esc(state.symbol)}</b><span>${state.watchlist.includes(state.symbol) ? 'إزالة' : 'متابعة'}</span></button>`;
+    if (w.innerHTML !== html) w.innerHTML = html;
+  }
+  function renderHeaderInfo() {
+    $('#qSym').textContent = state.symbol;
+    const pr = state.profile;
+    $('#qName').textContent = pr && pr.name ? pr.name + (pr.finnhubIndustry && pr.finnhubIndustry !== '—' ? ' · ' + pr.finnhubIndustry : '') : '—';
+    $$('#tfSeg button').forEach((b) => b.classList.toggle('on', b.dataset.tf === state.tf));
+    $$('.chart-tools .toggle').forEach((b) => b.classList.toggle('on', !!settings.overlays[b.dataset.ov]));
+    $('#demoBanner').hidden = !settings.demo;
+    if (IN_CLAUDE) {
+      $('#demoBanner span').innerHTML = '<b>معاينة داخل Claude:</b> هنا تعمل المنصة ببيانات محاكاة فقط، لأن Claude يمنع الصفحات من الاتصال بمواقع الأسعار. للأسعار اللحظية الحقيقية افتح ملف <span class="num">mirsad.html</span> في متصفح.';
+      $('#goLiveBtn').textContent = 'كيف أشغّل النسخة الحية؟';
+    }
+  }
+  function renderAnalysis() {
+    const a = state.analysis;
+    const dec = $('#decision');
+    if (!a || a.error) {
+      dec.className = 'decision NONE'; dec.textContent = '—';
+      $('#scoreTxt').textContent = '0'; $('#needle').style.right = '50%';
+      $('#setupTxt').textContent = a && a.error ? a.error : '';
+      $('#reasons').innerHTML = '';
+    } else {
+      const pl = a.plan;
+      dec.className = 'decision ' + pl.decision; dec.textContent = DEC_AR[pl.decision];
+      $('#scoreTxt').textContent = (a.signal.score > 0 ? '+' : '') + a.signal.score + ' · ' + a.signal.label;
+      $('#needle').style.right = (50 - a.signal.score / 2) + '%';
+      const db = state.dailyInfo ? ` · الاتجاه اليومي: ${state.dailyInfo.bias === 'bullish' ? 'صاعد' : state.dailyInfo.bias === 'bearish' ? 'هابط' : 'محايد'}` : '';
+      $('#setupTxt').textContent = `${pl.setup} · إطار ${TF_AR[state.tf]}${db}`;
+      $('#reasons').innerHTML = pl.why.map((w) => `<li>${esc(w)}</li>`).join('');
+    }
+    renderPlan(); renderTech(); renderPatterns(); Chart.drawOverlays();
+  }
+  function renderPlan() {
+    const a = state.analysis;
+    const grid = $('#levelsGrid'), kv = $('#planKv'), tm = $('#timing'), gd = $('#guards');
+    const ai = state.ai && !state.ai.error && state.ai.symbol === state.symbol && state.ai.tf === state.tf && state.ai.useOnChart ? state.ai.data : null;
+    $('#planSrc').textContent = ai ? 'خطة الذكاء الاصطناعي' : 'المحرك الآلي';
+    if (!a || a.error) { grid.innerHTML = '<div class="lv full"><span class="k">لا توجد خطة</span><span class="v">—</span></div>'; kv.innerHTML = tm.innerHTML = gd.innerHTML = ''; return; }
+    const pl = a.plan;
+    const avoid = pl.decision === 'AVOID' && !ai;
+    const zl = ai ? ai.entry && ai.entry.zone_low : pl.zoneLow, zh = ai ? ai.entry && (ai.entry.zone_high ?? ai.entry.zone_low) : pl.zoneHigh;
+    const st = ai ? ai.stop_loss : pl.stop, t1 = ai ? ai.targets && ai.targets[0] && ai.targets[0].price : pl.t1, t2 = ai ? ai.targets && ai.targets[1] && ai.targets[1].price : pl.t2;
+    const mid = zl != null && zh != null ? (zl + zh) / 2 : null;
+    const R = mid != null && st != null ? mid - st : null;
+    const pctFrom = (x) => (x == null || mid == null ? '' : ` <span class="small muted num">${pct((x / mid - 1) * 100, 1)}</span>`);
+    grid.innerHTML = `
+      <div class="lv entry full"><span class="k">${avoid ? 'منطقة مراقبة (لا دخول حالياً)' : pl.decision === 'WAIT' && !ai ? 'منطقة الدخول المنتظرة' : 'منطقة الشراء المقترحة'}</span><span class="v num">${fmt(zl)} – ${fmt(zh)}</span></div>
+      <div class="lv stop"><span class="k">وقف الخسارة</span><span class="v num">${fmt(st)}${pctFrom(st)}</span></div>
+      <div class="lv"><span class="k">المخاطرة للسهم (1R)</span><span class="v num">${fmt(R)}</span></div>
+      <div class="lv tgt"><span class="k">الهدف الأول (بيع النصف)</span><span class="v num">${fmt(t1)}${pctFrom(t1)}</span></div>
+      <div class="lv tgt"><span class="k">الهدف الثاني</span><span class="v num">${fmt(t2)}${pctFrom(t2)}</span></div>`;
+    const shares = R > 0 ? Math.min(Math.floor(settings.account * settings.riskPct / 100 / R), Math.floor(settings.account * settings.maxPosPct / 100 / mid)) : 0;
+    const rr2 = R > 0 && t2 != null ? (t2 - mid) / R : null;
+    kv.innerHTML = `
+      <div class="kv"><span>العائد ÷ المخاطرة (للهدف الثاني)</span><span class="num">${rr2 == null ? '—' : fmt(rr2, 1) + 'R'}</span></div>
+      <div class="kv"><span>حجم الصفقة بقاعدة ${settings.riskPct}%</span><span class="num">${shares} سهم · ${money(shares * (mid || 0), 0)}</span></div>
+      <div class="kv"><span>أقصى خسارة متوقعة</span><span class="num down">${money(shares * (R || 0))}</span></div>`;
+    const t = ai ? ai.timing || {} : null;
+    tm.innerHTML = ai
+      ? `<div><b>متى أدخل</b><span>${esc(t.when_to_enter || (ai.entry && ai.entry.trigger) || '—')}</span></div><div><b>مدة الاحتفاظ</b><span>${esc(t.holding_period || '—')}</span></div><div><b>وقف زمني</b><span>${esc(t.time_stop || '—')}</span></div><div><b>متى أبيع</b><span>${esc(t.exit_rules || '—')}</span></div>`
+      : `<div><b>متى أدخل</b><span>${esc(pl.timing.when)}</span></div><div><b>مدة الاحتفاظ</b><span>${esc(pl.timing.hold)}</span></div><div><b>وقف زمني</b><span>${esc(pl.timing.timeStop)}</span></div><div><b>متى أبيع</b><span>${esc(pl.timing.exit)}</span></div>`;
+    gd.innerHTML = pl.guards.map((g) => `<div class="guard ${g.level}">${g.level === 'hard' ? '⛔ ' : '⚠︎ '}${esc(g.text)}</div>`).join('');
+  }
+  function interp(name, val, i) {
+    const p = i.price;
+    switch (name) {
+      case 'ema': return i.ema9 > i.ema21 ? ['pos', 'المتوسط السريع فوق البطيء: زخم صاعد'] : ['neg', 'المتوسط السريع تحت البطيء: زخم هابط'];
+      case 'sma50': return val == null ? ['neu', 'غير متاح'] : p > val ? ['pos', 'السعر فوقه: اتجاه متوسط صاعد'] : ['neg', 'السعر تحته: اتجاه متوسط هابط'];
+      case 'sma200': return val == null ? ['neu', 'يحتاج 200 شمعة'] : p > val ? ['pos', 'فوق المتوسط الطويل'] : ['neg', 'تحت المتوسط الطويل'];
+      case 'vwap': return val == null ? ['neu', 'للأطر اليومية الداخلية فقط'] : p > val ? ['pos', 'المشترون مسيطرون اليوم'] : ['neg', 'البائعون مسيطرون اليوم'];
+      case 'rsi': return val >= 70 ? ['neg', 'تشبع شراء: خطر تصحيح'] : val <= 30 ? ['pos', 'تشبع بيع: ارتداد ممكن'] : val >= 50 ? ['pos', 'زخم إيجابي'] : ['neg', 'زخم ضعيف'];
+      case 'macd': return val > 0 ? (i.macdHist > i.macdHistPrev ? ['pos', 'موجب ومتصاعد'] : ['pos', 'موجب لكنه يضعف']) : (i.macdHist > i.macdHistPrev ? ['neu', 'سالب لكنه يتحسن'] : ['neg', 'سالب ومتراجع']);
+      case 'bb': return p >= i.bbUpper ? ['neg', 'عند الحد العلوي: امتداد'] : p <= i.bbLower ? ['pos', 'عند الحد السفلي'] : ['neu', 'داخل النطاق'];
+      case 'atr': return ['neu', `متوسط حركة الشمعة ≈ ${pct((val / p) * 100)} من السعر`];
+      case 'adx': return val == null ? ['neu', '—'] : val > 25 ? ['acc', `اتجاه قوي (${i.pdi > i.mdi ? 'للأعلى' : 'للأسفل'})`] : ['neu', 'اتجاه ضعيف / عرضي'];
+      case 'rv': return val >= 1.5 ? ['acc', 'حجم مرتفع: اهتمام قوي'] : val < 0.7 ? ['neu', 'حجم ضعيف'] : ['neu', 'حجم طبيعي'];
+      default: return ['neu', ''];
+    }
+  }
+  function renderTech() {
+    const a = state.analysis, el = $('#techPanel');
+    if (!a || a.error) { el.innerHTML = `<p class="muted">${esc(a && a.error ? a.error : 'لا توجد بيانات.')}</p>`; return; }
+    const i = a.ind, d = state.dailyInfo;
+    const row = (label, valHtml, key, val) => { const [cls, txt] = interp(key, val, i); return `<tr><td>${label}</td><td class="num">${valHtml}</td><td><span class="tag ${cls}">${esc(txt)}</span></td></tr>`; };
+    let html = `<div class="table-scroll"><table class="ind"><thead><tr><th>المؤشر (${TF_AR[state.tf]})</th><th>القيمة</th><th>القراءة</th></tr></thead><tbody>
+      ${row('EMA 9 / 21', `${fmt(i.ema9)} / ${fmt(i.ema21)}`, 'ema', null)}
+      ${row('SMA 50', fmt(i.sma50), 'sma50', i.sma50)}
+      ${row('SMA 200', fmt(i.sma200), 'sma200', i.sma200)}
+      ${state.tf !== '1day' ? row('VWAP', fmt(i.vwap), 'vwap', i.vwap) : ''}
+      ${row('RSI 14', fmt(i.rsi, 1), 'rsi', i.rsi)}
+      ${row('MACD (12,26,9)', `${fmt(i.macdLine, 3)} / ${fmt(i.macdSignal, 3)}`, 'macd', i.macdHist)}
+      ${row('بولنجر 20,2', `${fmt(i.bbLower)} – ${fmt(i.bbUpper)}`, 'bb', null)}
+      ${row('ATR 14', fmt(i.atr, 3), 'atr', i.atr)}
+      ${row('ADX 14', fmt(i.adx, 1), 'adx', i.adx)}
+      ${row('الحجم النسبي', fmt(i.relVol, 2) + '×', 'rv', i.relVol)}
+    </tbody></table></div>`;
+    html += `<h3 style="font:600 15px var(--font-display);margin:18px 0 8px">الدعوم والمقاومات</h3><div class="ai-grid">
+      <div class="ai-sec bear"><h4>مقاومات فوق السعر</h4><ul>${a.levels.resistances.map((l) => `<li><span class="num">${fmt(l.price)}</span> <span class="muted small">(${l.touches} لمسة)</span></li>`).join('') || '<li class="muted">لا يوجد</li>'}</ul></div>
+      <div class="ai-sec bull"><h4>دعوم تحت السعر</h4><ul>${a.levels.supports.map((l) => `<li><span class="num">${fmt(l.price)}</span> <span class="muted small">(${l.touches} لمسة)</span></li>`).join('') || '<li class="muted">لا يوجد</li>'}</ul></div>
+    </div>`;
+    if (d) html += `<h3 style="font:600 15px var(--font-display);margin:18px 0 8px">الإطار الأعلى (يومي)</h3><div class="stats">
+      <div class="stat"><span class="k">الاتجاه</span><span class="v ${d.bias === 'bullish' ? 'up' : d.bias === 'bearish' ? 'down' : ''}">${d.bias === 'bullish' ? 'صاعد' : d.bias === 'bearish' ? 'هابط' : 'محايد'}</span></div>
+      <div class="stat"><span class="k">SMA50 / SMA200</span><span class="v num" style="font-size:15px">${fmt(d.sma50)} / ${fmt(d.sma200)}</span></div>
+      <div class="stat"><span class="k">أعلى / أدنى سنة</span><span class="v num" style="font-size:15px">${fmt(d.hi52)} / ${fmt(d.lo52)}</span></div>
+      <div class="stat"><span class="k">تغير 5 أيام / 20 يوم</span><span class="v num" style="font-size:15px">${pct(d.chg5, 1)} / ${pct(d.chg20, 1)}</span></div>
+      <div class="stat"><span class="k">متوسط الحجم اليومي</span><span class="v num">${vol(d.avgVol)}</span></div>
+    </div>`;
+    html += `<h3 style="font:600 15px var(--font-display);margin:18px 0 8px">مكونات قوة الإشارة</h3><div class="list">${a.signal.parts.map((p) => `<div class="kv"><span>${esc(p.label)}</span><span class="num ${p.pts > 0 ? 'up' : p.pts < 0 ? 'down' : ''}">${p.pts > 0 ? '+' : ''}${p.pts}</span></div>`).join('')}</div>`;
+    el.innerHTML = html;
+  }
+  function renderPatterns() {
+    const a = state.analysis, el = $('#patPanel');
+    const pats = a && !a.error ? a.patterns : [];
+    $('#patCount').textContent = pats.length;
+    if (!pats.length) { el.innerHTML = '<p class="muted">لا توجد أنماط واضحة على هذا الإطار الآن. هذا طبيعي؛ لا تخترع إشارة غير موجودة.</p>'; return; }
+    el.innerHTML = `<div class="list">${pats.map((p) => `<div class="item"><div class="item-h"><b>${esc(p.name)}</b><span class="tag ${p.bias > 0 ? 'pos' : p.bias < 0 ? 'neg' : 'neu'}">${p.bias > 0 ? 'إيجابي' : p.bias < 0 ? 'سلبي' : 'محايد'}</span><span class="tag neu">قوة ${p.strength}/3</span></div><p>${esc(p.desc)}</p></div>`).join('')}</div>
+      <p class="small muted" style="margin-top:12px">الأنماط مكتشفة آلياً وتُعامل كمرشحات. التحليل بالذكاء الاصطناعي يؤكدها أو يرفضها من الشموع نفسها.</p>`;
+  }
+  function timeAgo(sec) { const m = Math.round((Date.now() / 1000 - sec) / 60); if (m < 60) return `قبل ${m} د`; const h = Math.round(m / 60); if (h < 24) return `قبل ${h} س`; return `قبل ${Math.round(h / 24)} يوم`; }
+  function renderNews() {
+    const el = $('#newsPanel'), n = state.news;
+    $('#newsCount').textContent = n.length;
+    if (!n.length) { el.innerHTML = `<p class="muted">${settings.finnhubKey || settings.demo ? 'لا توجد أخبار للسهم خلال آخر 7 أيام.' : 'أضف مفتاح Finnhub لعرض الأخبار.'}</p>`; return; }
+    el.innerHTML = `<div class="list">${n.map((x) => {
+      const tone = E.headlineTone(x.headline + ' ' + (x.summary || ''));
+      return `<div class="item news-item"><div class="item-h">${x.demo ? '<span class="tag acc">خبر تجريبي</span>' : ''}<span class="tag ${tone === 'positive' ? 'pos' : tone === 'negative' ? 'neg' : 'neu'}">${tone === 'positive' ? 'نبرة إيجابية' : tone === 'negative' ? 'نبرة سلبية' : 'محايد'}</span><span class="small muted">${esc(x.source || '')} · ${timeAgo(x.datetime)}</span></div>
+        ${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.headline)}</a>` : `<b style="direction:ltr;text-align:left">${esc(x.headline)}</b>`}
+        ${x.summary ? `<p>${esc(String(x.summary).slice(0, 280))}</p>` : ''}</div>`;
+    }).join('')}</div><p class="small muted" style="margin-top:12px">النبرة هنا تقدير سريع بالكلمات المفتاحية. للفهم الحقيقي لأثر الخبر استخدم تحليل الذكاء الاصطناعي.</p>`;
+  }
+  function renderAI() {
+    const el = $('#aiPanel');
+    if (state.aiBusy) {
+      el.innerHTML = `<div class="ai-empty"><div class="item-h"><span class="spinner"></span><b>لجنة التحليل تعمل على ${esc(state.symbol)}…</b><span class="num muted" id="aiElapsed">0 ث</span></div><p class="muted">المحلل الفني، محلل الأنماط، محلل الأخبار، المتفائل، المتشائم، مدير المخاطر، ثم القرار النهائي. يستغرق عادة 20 إلى 60 ثانية.</p><button class="btn" id="aiStop">إيقاف</button></div>`;
+      return;
+    }
+    const ai = state.ai && state.ai.symbol === state.symbol ? state.ai : null;
+    const intro = `<p class="muted" style="margin:0">يرسل مِرصاد كل البيانات (الشموع، المؤشرات، الأنماط، المستويات، الأخبار، توصيات المحللين، موعد الأرباح، وخطة المحرك الآلي) إلى Claude مع برومبت احترافي يحاكي لجنة تداول من 7 أدوار، مع قواعد مخاطرة إلزامية لا يستطيع النموذج تجاوزها.</p>`;
+    if (!ai) {
+      el.innerHTML = `<div class="ai-empty">${intro}<div class="btn-row" style="width:100%"><button class="btn primary" data-act="ai">${settings.anthropicKey ? 'حلّل الآن' : 'انسخ البرومبت والبيانات لـ Claude'}</button><button class="btn" data-act="showPrompt">عرض البرومبت الاحترافي</button></div>${settings.anthropicKey ? '' : '<p class="small muted" style="margin:0">بدون مفتاح API: انسخ النص والصقه في محادثة Claude (ضمن اشتراكك). مع مفتاح API في الإعدادات يظهر التحليل هنا مباشرة.</p>'}</div>`;
+      return;
+    }
+    if (ai.error) { el.innerHTML = `<div class="ai-empty"><div class="banner err" style="width:100%">${esc(ai.error)}</div><div class="btn-row"><button class="btn primary" data-act="ai">إعادة المحاولة</button><button class="btn" data-act="copy">انسخ لـ Claude بدلاً من ذلك</button></div></div>`; return; }
+    const d = ai.data; const ageMin = Math.round((Date.now() - ai.at) / 60000);
+    const pxNow = state.prices[state.symbol]; const atrV = state.analysis && state.analysis.ind ? state.analysis.ind.atr : null;
+    const stale = ai.tf !== state.tf || ageMin > 30 || (atrV && pxNow && ai.priceAt && Math.abs(pxNow - ai.priceAt) > atrV);
+    const t = d.targets || [];
+    const list = (arr) => (arr && arr.length ? `<ul>${arr.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">—</p>');
+    const conv = { low: 'منخفضة', medium: 'متوسطة', high: 'عالية' }[d.conviction] || d.conviction || '—';
+    const biasAr = (b) => ({ bullish: 'صاعد', bearish: 'هابط', neutral: 'محايد' }[b] || '—');
+    el.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="item-h" style="gap:12px"><span class="decision ${esc(d.decision)}">${DEC_AR[d.decision] || esc(d.decision)}</span>
+          <div style="display:flex;flex-direction:column;gap:2px"><b>${esc(d.setup || '')}</b><span class="small muted">القناعة: ${esc(conv)} · اليومي ${biasAr(d.higher_timeframe_bias)} · إطار التداول ${biasAr(d.trading_timeframe_bias)} · ${ageMin < 1 ? 'الآن' : 'قبل ' + ageMin + ' د'} · إطار ${TF_AR[ai.tf]}${ai.demo ? ' · بيانات محاكاة' : ''}</span></div></div>
+        ${stale ? '<div class="warnbox">⚠︎ هذا التحليل قديم أو السعر تحرك أكثر من 1×ATR منذ صدوره. أعد التحليل قبل التنفيذ.</div>' : ''}
+        ${ai.issues && ai.issues.length ? `<div class="guard hard">⛔ فحص مِرصاد للخطة: ${ai.issues.map(esc).join(' · ')}</div>` : ''}
+        ${d.decision === 'BUY' || (d.entry && d.entry.zone_low != null) ? `<div class="levels">
+          <div class="lv entry full"><span class="k">منطقة الدخول · ${esc((d.entry && d.entry.type) || '')}</span><span class="v num">${fmt(d.entry && d.entry.zone_low)} – ${fmt(d.entry && (d.entry.zone_high ?? d.entry.zone_low))}</span></div>
+          <div class="lv stop"><span class="k">وقف الخسارة</span><span class="v num">${fmt(d.stop_loss)}</span></div>
+          <div class="lv"><span class="k">عائد/مخاطرة (هدف 2)</span><span class="v num">${d.risk_reward_t2 == null ? '—' : fmt(d.risk_reward_t2, 1) + 'R'}</span></div>
+          <div class="lv tgt"><span class="k">الهدف الأول</span><span class="v num">${fmt(t[0] && t[0].price)}</span></div>
+          <div class="lv tgt"><span class="k">الهدف الثاني</span><span class="v num">${fmt(t[1] && t[1].price)}</span></div>
+        </div>
+        <div class="btn-row"><button class="btn" data-act="aiChart">${ai.useOnChart ? 'إخفاء خطة الذكاء من الرسم' : 'اعرض خطة الذكاء على الرسم واللوحة'}</button>${d.decision === 'BUY' ? '<button class="btn buy" data-act="aiBuy">شراء تجريبي بهذه الخطة</button>' : ''}</div>` : ''}
+        <div class="ai-grid">
+          <div class="ai-sec wide"><h4>شرح مبسّط</h4><p>${esc(d.beginner_explanation || '')}</p></div>
+          <div class="ai-sec"><h4>شرط الدخول</h4><p>${esc((d.entry && d.entry.trigger) || '—')}</p></div>
+          <div class="ai-sec"><h4>السعر الذي يُثبت خطأ الفكرة</h4><p>${esc(d.invalidation || '—')}</p></div>
+          <div class="ai-sec"><h4>متى أدخل وأخرج</h4><p>${esc((d.timing && d.timing.when_to_enter) || '')}</p><p class="small muted" style="margin-top:6px">${esc((d.timing && d.timing.holding_period) || '')} · ${esc((d.timing && d.timing.time_stop) || '')}</p></div>
+          <div class="ai-sec"><h4>سبب وقف الخسارة</h4><p>${esc(d.stop_reason || '—')}</p></div>
+          <div class="ai-sec"><h4>التحليل الفني</h4><p>${esc(d.technical_summary || '')}</p></div>
+          <div class="ai-sec"><h4>الأنماط البيانية</h4><p>${esc(d.pattern_summary || '')}</p></div>
+          <div class="ai-sec bull"><h4>حجة المتفائل</h4>${list(d.bull_case)}</div>
+          <div class="ai-sec bear"><h4>حجة المتشائم</h4>${list(d.bear_case)}</div>
+          <div class="ai-sec wide"><h4>الأخبار · ${esc({ positive: 'إيجابية', negative: 'سلبية', neutral: 'محايدة', mixed: 'مختلطة', none: 'لا توجد' }[d.news_sentiment] || '')}</h4>${(d.news || []).length ? `<ul>${d.news.map((n) => `<li><span class="tag ${n.impact === 'positive' ? 'pos' : n.impact === 'negative' ? 'neg' : 'neu'}">${n.impact === 'positive' ? 'إيجابي' : n.impact === 'negative' ? 'سلبي' : 'محايد'}</span> ${esc(n.headline)} <span class="muted small">${esc(n.why || '')}</span></li>`).join('')}</ul>` : '<p class="muted">لا أخبار مؤثرة.</p>'}</div>
+          <div class="ai-sec"><h4>المخاطر</h4>${list(d.risks)}</div>
+          <div class="ai-sec"><h4>الاختلاف مع المحرك الآلي</h4><p>${esc(d.disagreement_with_engine || 'متفق مع خطة المحرك.')}</p></div>
+          <div class="ai-sec wide"><h4>قائمة التحقق قبل الشراء</h4>${(d.checklist || []).map((c, k) => `<label class="check"><input type="checkbox" id="chk${k}"> <span>${esc(c)}</span></label>`).join('') || '<p class="muted">—</p>'}</div>
+        </div>
+        <div class="btn-row"><button class="btn primary" data-act="ai">إعادة التحليل</button><button class="btn" data-act="copy">انسخ لـ Claude</button></div>
+      </div>`;
+  }
+  function renderPaperLive() {
+    const eq = Paper.equity();
+    const e = $('#eqVal'); if (e) { e.textContent = money(eq); e.className = 'v num ' + (eq >= Paper.data.start ? 'up' : 'down'); }
+    for (const p of Paper.data.positions) {
+      const px = state.prices[p.symbol] ?? p.entry; const pnl = (px - p.entry) * p.qtyOpen;
+      const r = $(`[data-pos="${p.id}"]`);
+      if (r) { r.querySelector('.ppx').textContent = fmt(px); const pe = r.querySelector('.ppnl'); pe.textContent = money(pnl); pe.className = 'num ppnl ' + (pnl >= 0 ? 'up' : 'down'); }
+    }
+  }
+  function renderPaper() {
+    const el = $('#paperPanel'), d = Paper.data, st = Paper.stats();
+    $('#posCount').textContent = d.positions.length + d.orders.length;
+    const eq = Paper.equity();
+    el.innerHTML = `
+      <div class="stats">
+        <div class="stat"><span class="k">قيمة المحفظة</span><span class="v num ${eq >= d.start ? 'up' : 'down'}" id="eqVal">${money(eq)}</span></div>
+        <div class="stat"><span class="k">النقد المتاح</span><span class="v num">${money(d.cash)}</span></div>
+        <div class="stat"><span class="k">الربح المحقق</span><span class="v num ${st.realized >= 0 ? 'up' : 'down'}">${money(st.realized)}</span></div>
+        <div class="stat"><span class="k">نسبة الصفقات الرابحة</span><span class="v num">${st.winRate == null ? '—' : fmt(st.winRate, 0) + '%'} <span class="small muted">(${st.closed})</span></span></div>
+        <div class="stat"><span class="k">متوسط R للصفقة</span><span class="v num ${st.avgR == null ? '' : st.avgR >= 0 ? 'up' : 'down'}">${st.avgR == null ? '—' : fmt(st.avgR, 2) + 'R'}</span></div>
+      </div>
+      <h3 style="font:600 15px var(--font-display);margin:18px 0 8px">المراكز المفتوحة</h3>
+      ${d.positions.length ? `<div class="table-scroll"><table class="ind"><thead><tr><th>السهم</th><th>الكمية</th><th>الدخول</th><th>الحالي</th><th>الوقف</th><th>هدف 1 / 2</th><th>الربح</th><th></th></tr></thead><tbody>
+        ${d.positions.map((p) => { const px = state.prices[p.symbol] ?? p.entry; const pnl = (px - p.entry) * p.qtyOpen; return `<tr data-pos="${p.id}"><td class="num"><b>${esc(p.symbol)}</b></td><td class="num">${p.qtyOpen}${p.qtyOpen !== p.qty ? '/' + p.qty : ''}</td><td class="num">${fmt(p.entry)}</td><td class="num ppx">${fmt(px)}</td><td class="num down">${fmt(p.stop)}${p.t1Hit ? ' <span class="tag acc">تعادل</span>' : ''}</td><td class="num up">${fmt(p.t1)} / ${fmt(p.t2)}</td><td class="num ppnl ${pnl >= 0 ? 'up' : 'down'}">${money(pnl)}</td><td><button class="btn danger" data-close="${p.id}" style="padding:4px 10px;font-size:13px">إغلاق</button></td></tr>`; }).join('')}
+      </tbody></table></div>` : '<p class="muted">لا توجد مراكز مفتوحة. اضغط "شراء تجريبي" من لوحة الخطة.</p>'}
+      ${d.orders.length ? `<h3 style="font:600 15px var(--font-display);margin:18px 0 8px">أوامر شراء معلّقة</h3><div class="list">${d.orders.map((o) => `<div class="kv"><span class="num">${esc(o.symbol)} · ${o.qty} سهم عند ${fmt(o.limit)} أو أقل · وقف ${fmt(o.stop)}</span><button class="btn danger" data-cancel="${o.id}" style="padding:4px 10px;font-size:13px">إلغاء</button></div>`).join('')}</div>` : ''}
+      <h3 style="font:600 15px var(--font-display);margin:18px 0 8px">سجل الصفقات</h3>
+      ${d.history.length ? `<div class="table-scroll"><table class="ind"><thead><tr><th>السهم</th><th>الكمية</th><th>الدخول</th><th>الخروج</th><th>الربح</th><th>R</th><th>السبب</th><th>الوقت</th></tr></thead><tbody>
+        ${d.history.slice(0, 50).map((h) => `<tr><td class="num">${esc(h.symbol)}</td><td class="num">${h.qty}</td><td class="num">${fmt(h.entry)}</td><td class="num">${fmt(h.exit)}</td><td class="num ${h.pnl >= 0 ? 'up' : 'down'}">${money(h.pnl)}</td><td class="num">${h.r == null ? '—' : fmt(h.r, 2)}</td><td>${esc(h.reason)}</td><td class="num small">${localDateTime(h.closedAt)}</td></tr>`).join('')}
+      </tbody></table></div>` : '<p class="muted">لا توجد صفقات مغلقة بعد.</p>'}
+      <div style="margin-top:16px" id="resetBox"><button class="btn" data-act="resetAsk">تصفير المحفظة التجريبية</button></div>
+      <p class="small muted">الإدارة الآلية: عند الهدف الأول يُباع نصف الكمية ويُرفع الوقف لسعر الدخول، وعند الهدف الثاني يُغلق الباقي. يتم التنفيذ على أسعار الجلسة الرسمية فقط.</p>`;
+  }
+  function renderAll() { renderHeaderInfo(); renderLive(); renderAnalysis(); renderNews(); renderAI(); renderPaper(); }
+
+  function showError(msg) { const b = $('#errBanner'); b.textContent = msg; b.hidden = false; }
+  function hideError() { $('#errBanner').hidden = true; }
+
+  /* ---------------- Buy form ---------------- */
+  function openBuyForm(src) {
+    const a = state.analysis; const box = $('#buyForm');
+    let plan = null;
+    if (src === 'ai' && state.ai && state.ai.data && state.ai.data.entry && (state.ai.data.targets || []).length >= 2) { const d = state.ai.data; plan = { zoneLow: d.entry.zone_low, zoneHigh: d.entry.zone_high ?? d.entry.zone_low, stop: d.stop_loss, t1: d.targets[0].price, t2: d.targets[1].price, decision: d.decision }; }
+    else if (a && !a.error) plan = a.plan;
+    if (!plan) return toast('لا توجد خطة بعد.', 'warn');
+    const px = state.prices[state.symbol] ?? a.ind.price;
+    const mid = (plan.zoneLow + plan.zoneHigh) / 2;
+    const R = mid - plan.stop;
+    const qty = R > 0 ? Math.max(1, Math.min(Math.floor(settings.account * settings.riskPct / 100 / R), Math.floor(settings.account * settings.maxPosPct / 100 / mid))) : 1;
+    const inZone = px <= plan.zoneHigh;
+    box.hidden = false;
+    box.innerHTML = `<div class="item" style="gap:10px">
+      ${plan.decision !== 'BUY' ? `<div class="guard ${plan.decision === 'AVOID' ? 'hard' : ''}">القرار الحالي "${DEC_AR[plan.decision]}". مسموح للتدريب، لكن لاحظ أنك تخالف الخطة.</div>` : ''}
+      <div class="form">
+        <label class="field">نوع الأمر<select id="bfKind"><option value="market"${inZone ? ' selected' : ''}>بسعر السوق الآن (${fmt(px)})</option><option value="limit"${inZone ? '' : ' selected'}>محدد (Limit)</option></select></label>
+        <label class="field">سعر الأمر المحدد<input id="bfLimit" class="num" inputmode="decimal" value="${fmt(plan.zoneHigh).replace(/,/g, '')}"></label>
+        <label class="field">الكمية<input id="bfQty" class="num" inputmode="numeric" value="${qty}"></label>
+        <label class="field">وقف الخسارة<input id="bfStop" class="num" inputmode="decimal" value="${fmt(plan.stop).replace(/,/g, '')}"></label>
+        <label class="field">الهدف الأول<input id="bfT1" class="num" inputmode="decimal" value="${fmt(plan.t1).replace(/,/g, '')}"></label>
+        <label class="field">الهدف الثاني<input id="bfT2" class="num" inputmode="decimal" value="${fmt(plan.t2).replace(/,/g, '')}"></label>
+      </div>
+      <div class="btn-row"><button class="btn buy" id="bfGo">تأكيد الشراء التجريبي</button><button class="btn" id="bfCancel">إلغاء</button></div></div>`;
+    $('#bfGo').onclick = () => {
+      const kind = $('#bfKind').value;
+      const price = kind === 'market' ? (state.prices[state.symbol] ?? px) : parseFloat($('#bfLimit').value);
+      Paper.open({ symbol: state.symbol, qty: parseInt($('#bfQty').value, 10), price, stop: parseFloat($('#bfStop').value), t1: parseFloat($('#bfT1').value), t2: parseFloat($('#bfT2').value), tf: state.tf, kind });
+      box.hidden = true; box.innerHTML = '';
+    };
+    $('#bfCancel').onclick = () => { box.hidden = true; box.innerHTML = ''; };
+  }
+
+  /* ---------------- Modals ---------------- */
+  function modal(title, bodyHtml) {
+    const m = $('#modal');
+    m.innerHTML = `<div class="modal-box" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="card-h"><h2>${esc(title)}</h2><button class="icon-btn x" data-close-modal aria-label="إغلاق">✕</button></div><div class="card-b">${bodyHtml}</div></div>`;
+    m.hidden = false;
+    m.onclick = (e) => { if (e.target === m || e.target.closest('[data-close-modal]')) closeModal(); };
+  }
+  function closeModal() { const m = $('#modal'); m.hidden = true; m.innerHTML = ''; }
+  async function copyText(text, ta) {
+    try { await navigator.clipboard.writeText(text); toast('تم النسخ. الصقه في محادثة Claude.', 'up'); }
+    catch { if (ta) { ta.focus(); ta.select(); } toast('حدّد النص وانسخه يدوياً (Ctrl/⌘+C).', 'warn'); }
+  }
+  function openPromptModal() {
+    const text = 'SYSTEM INSTRUCTIONS (follow exactly):\n\n' + P.buildSystem('report') + '\n\n' + buildPackage();
+    modal('انسخ لـ Claude', `<div style="display:flex;flex-direction:column;gap:12px">
+      <ol class="steps"><li>اضغط "نسخ".</li><li>افتح محادثة جديدة في Claude والصق النص.</li><li>سيرجع لك تقرير اللجنة الكامل بالعربي: القرار، الدخول، الوقف، الأهداف، التوقيت، الأخبار.</li></ol>
+      <textarea class="prompt-text" id="promptTa" readonly>${esc(text)}</textarea>
+      <div class="btn-row"><button class="btn primary" id="copyGo">نسخ (${fmt(text.length / 1000, 1)} ألف حرف)</button></div>
+      <p class="small muted" style="margin:0">لتظهر النتيجة داخل مِرصاد مباشرة، أضف مفتاح Claude API من الإعدادات (يُحاسب حسب الاستخدام في console.anthropic.com).</p></div>`);
+    $('#copyGo').onclick = () => copyText(text, $('#promptTa'));
+  }
+  function openPromptViewer() {
+    modal('البرومبت الاحترافي', `<div style="display:flex;flex-direction:column;gap:12px;font-size:14px">
+      <p style="margin:0">مبني على أفضل الممارسات المنشورة في التداول بالذكاء الاصطناعي:</p>
+      <ul class="steps">
+        <li><b>لجنة متعددة الأدوار</b> مستوحاة من إطار TradingAgents البحثي: محلل فني، محلل أنماط، محلل أخبار، باحث متفائل، باحث متشائم، مدير مخاطر بحق النقض، ثم متداول رئيسي يصدر القرار.</li>
+        <li><b>تأكيد الإطار الأعلى</b> (اليومي) قبل إطار التداول.</li>
+        <li><b>وقف خسارة هيكلي</b> تحت دعم حقيقي بمسافة 1–2×ATR، وأهداف بمضاعفات R.</li>
+        <li><b>سعر الإبطال</b>: النموذج ملزم بتسمية السعر الذي يُثبت خطأ الفكرة.</li>
+        <li><b>قواعد إلزامية</b>: شراء فقط، عائد/مخاطرة ≥ 2، لا مطاردة، لا تداول قبل الأرباح بـ 3 أيام، لا أسهم أقل من 5$ أو ضعيفة السيولة، حجم الصفقة بقاعدة نسبة المخاطرة.</li>
+        <li><b>منع الاختلاق</b>: يستخدم فقط الأرقام المرسلة، ويوضح أين يختلف مع المحرك الآلي.</li>
+      </ul>
+      <textarea class="prompt-text" readonly>${esc(P.buildSystem('json'))}</textarea></div>`);
+  }
+  function openLiveHelp() {
+    modal('تشغيل النسخة الحية', `<ol class="steps">
+      <li>نزّل ملف <span class="num">mirsad.html</span> المرفق في المحادثة.</li>
+      <li>افتحه في متصفح على الكمبيوتر (Chrome أو Edge أو Safari)، أو في Chrome على أندرويد.</li>
+      <li>من الإعدادات أضف مفتاحي Finnhub و Twelve Data المجانيين.</li>
+      <li>تصلك الصفقات لحظة بلحظة، والأخبار، والتحليل الكامل.</li></ol>
+      <p class="small muted">على الآيفون لا تعمل ملفات HTML المحلية بشكل كامل، والحل استضافة الملف على رابط (مثل GitHub Pages) وفتحه من Safari.</p>`);
+  }
+  function openSettings() {
+    const s = settings;
+    if (IN_CLAUDE) return openLiveHelp();
+    modal('الإعدادات', `<div style="display:flex;flex-direction:column;gap:16px">
+      <div class="item"><b>المفاتيح المجانية للبيانات الحقيقية</b>
+        <ol class="steps small">
+          <li>Finnhub: سجّل في <a href="https://finnhub.io/register" target="_blank" rel="noopener">finnhub.io/register</a> وانسخ API Key (مجاني: صفقات لحظية + أخبار).</li>
+          <li>Twelve Data: سجّل في <a href="https://twelvedata.com/register" target="_blank" rel="noopener">twelvedata.com/register</a> وانسخ API Key (مجاني: 800 طلب يومياً للشموع).</li>
+          <li>اختياري، Claude API: من <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a> ليظهر التحليل داخل المنصة (مدفوع حسب الاستخدام).</li>
+        </ol>
+        <div class="form">
+          <label class="field wide">مفتاح Finnhub<input id="sFh" class="num" value="${esc(s.finnhubKey)}" autocomplete="off" spellcheck="false"></label>
+          <label class="field wide">مفتاح Twelve Data<input id="sTd" class="num" value="${esc(s.twelveKey)}" autocomplete="off" spellcheck="false"></label>
+          <label class="field wide">مفتاح Claude API (اختياري)<input id="sAn" class="num" type="password" value="${esc(s.anthropicKey)}" autocomplete="off" spellcheck="false"></label>
+          <label class="field">نموذج Claude<select id="sModel">
+            ${[['claude-sonnet-5-5', 'Sonnet 5.5 (متوازن، موصى به)'], ['claude-opus-5-5', 'Opus 5.5 (الأعمق، أغلى)'], ['claude-haiku-5-5', 'Haiku 5.5 (الأسرع، أرخص)']].map(([v, l]) => `<option value="${v}"${s.model === v ? ' selected' : ''}>${l}</option>`).join('')}
+          </select></label>
+        </div>
+        <p class="keyhint">المفاتيح تُحفظ في متصفحك فقط على هذا الجهاز ولا تُرسل إلا لمزوّدها.</p>
+      </div>
+      <div class="item"><b>إدارة المخاطر</b>
+        <div class="form">
+          <label class="field">حجم الحساب ($)<input id="sAcc" class="num" inputmode="decimal" value="${s.account}"></label>
+          <label class="field">المخاطرة لكل صفقة (%)<input id="sRisk" class="num" inputmode="decimal" value="${s.riskPct}"></label>
+          <label class="field">أقصى حجم مركز (%)<input id="sMax" class="num" inputmode="decimal" value="${s.maxPosPct}"></label>
+        </div>
+        <p class="small muted" style="margin:0">القاعدة الشائعة للمبتدئ: لا تخاطر بأكثر من 1% من الحساب في الصفقة الواحدة.</p>
+      </div>
+      <div class="item"><b>عام</b>
+        <label class="check"><input type="checkbox" id="sDemo"${s.demo ? ' checked' : ''}> <span>الوضع التجريبي (بيانات محاكاة بدون مفاتيح)</span></label>
+        <label class="check"><input type="checkbox" id="sSound"${s.sound ? ' checked' : ''}> <span>صوت للتنبيهات</span></label>
+        <div class="btn-row"><button class="btn" id="sNotif">تفعيل إشعارات المتصفح</button><button class="btn" id="sPrompt">عرض البرومبت الاحترافي</button></div>
+      </div>
+      <div class="btn-row"><button class="btn primary" id="sSave">حفظ وإعادة التحميل</button></div></div>`);
+    $('#sNotif').onclick = async () => { try { const r = await Notification.requestPermission(); toast(r === 'granted' ? 'تم تفعيل الإشعارات.' : 'لم يتم السماح بالإشعارات.', r === 'granted' ? 'up' : 'warn'); } catch { toast('المتصفح لا يدعم الإشعارات هنا.', 'warn'); } };
+    $('#sPrompt').onclick = openPromptViewer;
+    $('#sDemo').onchange = (e) => { if (!e.target.checked && !$('#sFh').value.trim() && !$('#sTd').value.trim()) toast('أضف مفتاحاً واحداً على الأقل لإيقاف الوضع التجريبي.', 'warn'); };
+    $('#sSave').onclick = () => {
+      const num = (id, d, lo, hi) => { const v = parseFloat($(id).value); return isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
+      settings.finnhubKey = $('#sFh').value.trim(); settings.twelveKey = $('#sTd').value.trim(); settings.anthropicKey = $('#sAn').value.trim();
+      settings.model = $('#sModel').value;
+      settings.account = num('#sAcc', 10000, 100, 1e9); settings.riskPct = num('#sRisk', 1, 0.1, 5); settings.maxPosPct = num('#sMax', 25, 1, 100);
+      settings.sound = $('#sSound').checked;
+      settings.demo = $('#sDemo').checked || !(settings.finnhubKey || settings.twelveKey);
+      saveSettings(); closeModal();
+      if (!Paper.data.history.length && !Paper.data.positions.length) Paper.reset(settings.account);
+      Live.start(); loadSymbol(state.symbol);
+    };
+  }
+
+  /* ---------------- Tabs & events ---------------- */
+  function selectTab(t) {
+    $$('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
+    $$('.panel').forEach((p) => { p.hidden = p.dataset.panel !== t; });
+    if (t === 'paper') renderPaper();
+  }
+  function applyTheme() {
+    const t = settings.theme;
+    if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+    Chart.applyTheme();
+  }
+
+  function bind() {
+    $('#settingsBtn').onclick = openSettings;
+    $('#goLiveBtn').onclick = () => (IN_CLAUDE ? openLiveHelp() : openSettings());
+    $('#themeBtn').onclick = () => {
+      const dark = settings.theme === 'dark' || (settings.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+      settings.theme = dark ? 'light' : 'dark'; saveSettings(); applyTheme();
+    };
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (settings.theme === 'auto') Chart.applyTheme(); });
+    $('#tfSeg').onclick = (e) => { const b = e.target.closest('button'); if (!b || b.dataset.tf === state.tf) return; state.tf = b.dataset.tf; store.set('tf', state.tf); loadSymbol(state.symbol); };
+    $('#watch').onclick = (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      if (b.id === 'watchToggle') {
+        const s = state.symbol;
+        state.watchlist = state.watchlist.includes(s) ? state.watchlist.filter((x) => x !== s) : [...state.watchlist, s].slice(0, 20);
+        store.set('watchlist', state.watchlist); renderWatch(); Live.resubscribe(); return;
+      }
+      if (b.dataset.sym && b.dataset.sym !== state.symbol) loadSymbol(b.dataset.sym);
+    };
+    $$('.chart-tools .toggle').forEach((b) => { b.onclick = () => { settings.overlays[b.dataset.ov] = !settings.overlays[b.dataset.ov]; saveSettings(); b.classList.toggle('on'); Chart.drawOverlays(); }; });
+    $('#tabs').onclick = (e) => { const b = e.target.closest('button'); if (b) selectTab(b.dataset.tab); };
+    $('#paperBuyBtn').onclick = () => openBuyForm('engine');
+    $('#aiBtn').onclick = runAI;
+    $('#copyPromptBtn').onclick = openPromptModal;
+    // symbol search
+    const inp = $('#symInput'), sug = $('#suggest');
+    let sTimer = null;
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { sug.hidden = true; loadSymbol(inp.value); inp.blur(); } if (e.key === 'Escape') sug.hidden = true; });
+    inp.addEventListener('input', () => {
+      clearTimeout(sTimer);
+      const q = inp.value.trim();
+      if (!q || !settings.finnhubKey || settings.demo) { sug.hidden = true; return; }
+      sTimer = setTimeout(async () => {
+        try {
+          const r = await fh('search', { q, exchange: 'US' });
+          const items = (r.result || []).filter((x) => !x.symbol.includes(':') && (x.type === 'Common Stock' || x.type === 'ETP' || x.type === 'ADR' || !x.type)).slice(0, 8);
+          sug.innerHTML = items.map((x) => `<button data-sym="${esc(x.symbol)}"><b class="num">${esc(x.displaySymbol || x.symbol)}</b><span class="muted" style="direction:ltr">${esc(x.description)}</span></button>`).join('');
+          sug.hidden = !items.length;
+        } catch { sug.hidden = true; }
+      }, 350);
+    });
+    sug.onclick = (e) => { const b = e.target.closest('button'); if (b) { sug.hidden = true; loadSymbol(b.dataset.sym); } };
+    document.addEventListener('click', (e) => { if (!e.target.closest('.search')) sug.hidden = true; });
+    // delegated actions
+    document.addEventListener('click', (e) => {
+      const act = e.target.closest('[data-act]'); const cl = e.target.closest('[data-close]'); const cn = e.target.closest('[data-cancel]');
+      if (e.target.closest('#aiStop') && state.aiBusy) { state.aiBusy.ctl.abort(); return; }
+      if (cl) { const p = Paper.data.positions.find((x) => x.id === cl.dataset.close); if (p) { Paper.closePart(p, p.qtyOpen, state.prices[p.symbol] ?? p.entry, 'إغلاق يدوي'); renderPaper(); Chart.drawOverlays(); Live.resubscribe(); } return; }
+      if (cn) { Paper.data.orders = Paper.data.orders.filter((o) => o.id !== cn.dataset.cancel); Paper.save(); renderPaper(); Live.resubscribe(); return; }
+      if (!act) return;
+      const a = act.dataset.act;
+      if (a === 'ai') runAI();
+      else if (a === 'copy') openPromptModal();
+      else if (a === 'showPrompt') openPromptViewer();
+      else if (a === 'aiChart' && state.ai) { state.ai.useOnChart = !state.ai.useOnChart; renderAI(); renderPlan(); Chart.drawOverlays(); }
+      else if (a === 'aiBuy') { openBuyForm('ai'); $('#buyForm').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      else if (a === 'resetAsk') { $('#resetBox').innerHTML = `<div class="inline-confirm"><span>تصفير كل المراكز والسجل وبدء رصيد جديد ${money(settings.account, 0)}؟</span><button class="btn danger" data-act="resetYes">نعم، صفّر</button><button class="btn" data-act="resetNo">إلغاء</button></div>`; }
+      else if (a === 'resetYes') { Paper.reset(settings.account); toast('تم تصفير المحفظة التجريبية.', 'warn'); }
+      else if (a === 'resetNo') renderPaper();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#modal').hidden) closeModal(); });
+    setInterval(() => { renderFeed(); }, 15000);
+    // re-analyse periodically so market-phase guards stay current
+    setInterval(() => { if (state.bars.length) analyzeNow(); }, 60000);
+    // refresh news every 5 min
+    setInterval(async () => {
+      if (!settings.finnhubKey || settings.demo) return;
+      try { const n = await fh('company-news', { symbol: state.symbol, from: ymd(new Date(Date.now() - 7 * 864e5)), to: ymd(new Date()) }); state.news = (Array.isArray(n) ? n : []).sort((a, b) => b.datetime - a.datetime).slice(0, 25); renderNews(); } catch { /* keep old */ }
+    }, 5 * 60e3);
+  }
+
+  // boot
+  if (Paper.data.start == null) Paper.reset(settings.account);
+  bind();
+  if (settings.theme !== 'auto') document.documentElement.setAttribute('data-theme', settings.theme);
+  Chart.init();
+  $('#symInput').value = state.symbol;
+  Live.start();
+  loadSymbol(state.symbol);
+})();
+</script>
+</body>
+</html>
